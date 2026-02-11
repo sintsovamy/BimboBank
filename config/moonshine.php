@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\MoonshineUser;
+use App\MoonShine\Pages\CustomProfilePage;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -7,18 +9,13 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use MoonShine\ColorManager\Palettes\PurplePalette;
 use MoonShine\Crud\Forms\FiltersForm;
 use MoonShine\Crud\Forms\LoginForm;
 use MoonShine\Laravel\Exceptions\MoonShineNotFoundException;
 use MoonShine\Laravel\Http\Middleware\Authenticate;
 use MoonShine\Laravel\Http\Middleware\ChangeLocale;
-use MoonShine\Laravel\Layouts\AppLayout;
-use MoonShine\Laravel\Models\MoonshineUser;
-use MoonShine\Laravel\Pages\Dashboard;
 use MoonShine\Laravel\Pages\ErrorPage;
 use MoonShine\Laravel\Pages\LoginPage;
-use MoonShine\Laravel\Pages\ProfilePage;
 
 return [
     'title' => env('MOONSHINE_TITLE', 'PickMeBank'),
@@ -96,7 +93,7 @@ return [
 
     'pages' => [
         'dashboard' => App\MoonShine\Pages\Dashboard::class,
-        'profile' => ProfilePage::class,
+        'profile' => CustomProfilePage::class,
         'login' => LoginPage::class,
         'error' => ErrorPage::class,
     ],
