@@ -22,14 +22,14 @@ use MoonShine\Laravel\Pages\ProfilePage;
 
 return [
     'title' => env('MOONSHINE_TITLE', 'PickMeBank'),
-    'logo' => '/vendor/moonshine/logo-small.svg',
-    'logo_small' => '/vendor/moonshine/logo-small.svg',
+    'logo' => 'logo.png',
+    'logo_small' => 'logo.png',
 
     'favicons' => [
-        'apple-touch' => '/vendor/moonshine/apple-touch-icon.png',
-        '32' => '/vendor/moonshine/favicon-32x32.png',
-        '16' => '/vendor/moonshine/favicon-16x16.png',
-        'safari-pinned-tab' => '/vendor/moonshine/safari-pinned-tab.svg',
+        'apple-touch' => 'logo.png',
+        '32' => 'logo.png',
+        '16' => 'logo.png',
+        'safari-pinned-tab' => 'logo.png',
     ],
 
     // Default flags
