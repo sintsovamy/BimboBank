@@ -18,7 +18,7 @@ use MoonShine\Laravel\Pages\ErrorPage;
 use MoonShine\Laravel\Pages\LoginPage;
 
 return [
-    'title' => env('MOONSHINE_TITLE', 'PickMeBank'),
+    'title' => env('MOONSHINE_TITLE', 'Bimbo Bank'),
     'logo' => 'logo.png',
     'logo_small' => 'logo.png',
 
