@@ -20,6 +20,19 @@ enum AccountTypes: string
             self::CREDIT => 'Кредитный'
         };
     }
+
+    /**
+     * @return AccountTypes[]
+     */
+    public static function values(): array
+    {
+        return [
+            self::CURRENT,
+            self::DEPOSIT,
+            self::CHECKING,
+            self::CREDIT,
+        ];
+    }
 }
 
 

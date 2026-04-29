@@ -19,9 +19,9 @@ return new class extends Migration
             $table->foreignId('currency_id')->constrained('currencies')->cascadeOnDelete();
 
             $table->string('account_number', 20);
-            $table->enum('type', (array)AccountTypes::class);
+            $table->enum('type', AccountTypes::values());
             $table->decimal('balance', 18, 2)->default(0.0);
-            $table->enum('status', (array)AccountStatuses::class);
+            $table->enum('status', AccountStatuses::values());
 
             $table->timestampTz('opened_at');
             $table->timestampTz('closed_at')->nullable();

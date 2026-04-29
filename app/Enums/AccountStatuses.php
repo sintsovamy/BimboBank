@@ -24,6 +24,21 @@ enum AccountStatuses: string
             self::CLOSED => 'Закрыт'
         };
     }
+
+    /**
+     * @return AccountStatuses[]
+     */
+    public static function values(): array
+    {
+        return [
+            self::ACTIVE,
+            self::INACTIVE,
+            self::BLOCKED,
+            self::CLOSED,
+            self::FROZEN,
+            self::CLOSING
+        ];
+    }
 }
 
 

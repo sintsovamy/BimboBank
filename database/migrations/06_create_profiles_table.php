@@ -29,6 +29,8 @@ return new class extends Migration
             $table->string('phone_number');
             $table->string('email');
 
+            $table->index('phone_number');
+
             $table->timestampsTz();
         });
     }
