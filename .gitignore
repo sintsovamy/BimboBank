@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+/public/vendor
+lang/vendor/moonshine/ru/
+storage/debugbar/

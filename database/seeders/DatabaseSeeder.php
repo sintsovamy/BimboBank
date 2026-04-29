@@ -17,8 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             MCCSeeder::class,
             CurrencySeeder::class,
-            UserSeeder::class,
-            ProductSeeder::class
+            UserSeeder::class
         ]);
     }
 }

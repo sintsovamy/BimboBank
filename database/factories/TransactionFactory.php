@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\MCC;
 use App\Models\Transaction;
+use Faker\Factory as Faker;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -65,12 +66,14 @@ class TransactionFactory extends Factory
      */
     public function externalTransfer(string $transactionType): static
     {
-        return $this->state(function (array $attributes) use ($transactionType) {
+        $faker = Faker::create('ru_RU');
+
+        return $this->state(function (array $attributes) use ($transactionType, $faker) {
 
             return [
                 'transaction_type' => $transactionType,
                 'destination_account_id' => null,
-                'external_destination_bank' => $this->faker->company(),
+                'external_destination_bank' => $faker->bank(),
             ];
         });
     }

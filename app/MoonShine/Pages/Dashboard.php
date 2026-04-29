@@ -4,21 +4,36 @@ declare(strict_types=1);
 
 namespace App\MoonShine\Pages;
 
+use App\Enums\TransactionStatusTypes;
 use App\Models\Account;
 use App\Models\Transaction;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use MoonShine\Apexcharts\Components\DonutChartMetric;
+use MoonShine\Contracts\Core\TypeCasts\DataWrapperContract;
 use MoonShine\Laravel\Pages\Page;
 use MoonShine\Contracts\UI\ComponentContract;
+use MoonShine\Support\Enums\FormMethod;
 use MoonShine\UI\Components\Collapse;
+use MoonShine\UI\Components\FormBuilder;
 use MoonShine\UI\Components\Layout\Box;
+use MoonShine\UI\Components\Layout\Column;
+use MoonShine\UI\Components\Layout\Grid;
 use MoonShine\UI\Components\Table\TableBuilder;
+use MoonShine\UI\Components\Tabs;
+use MoonShine\UI\Components\Tabs\Tab;
+use MoonShine\UI\Fields\DateRange;
 use MoonShine\UI\Fields\Preview;
-use MoonShine\UI\Fields\Text;
 
 #[\MoonShine\MenuManager\Attributes\SkipMenu]
 
 class Dashboard extends Page
 {
+    /**
+     * @var Collection|null
+     */
+    private ?Collection $accountsCache = null;
+
     /**
      * @return array<string, string>
      */
@@ -39,9 +54,14 @@ class Dashboard extends Page
      */
     private function getAccounts(): Collection
     {
-        $user = auth()->user();
+        if ($this->accountsCache === null) {
+            $user = auth()->user();
+            $this->accountsCache = $user->accounts()
+                ->with(['product', 'latestTransactions'])
+                ->get();
+        }
 
-        return $user->accounts()->with(['product', 'latestTransactions'])->get();
+        return $this->accountsCache;
     }
 
     /**
@@ -75,47 +95,137 @@ class Dashboard extends Page
     private function getTransactionsTable(Account $account): TableBuilder
     {
         return TableBuilder::make()
+            ->tdAttributes(fn(?DataWrapperContract $data, int $row, int $cell): array => match ($cell) {
+                0 => ['style' => 'width: 300px;'],
+                1 => ['style' => 'width: 150px;'],
+                default => [],
+            })
             ->fields([
-                Text::make(
+                Preview::make(
                     '',
                     '',
-                    fn (Transaction $transaction) => $this->getTitleForTransaction($transaction))
-                ->unescape()
+                    function (Transaction $transaction) use ($account) {
+                        return $this->getTitleForTransaction($transaction, $account);
+                    }),
+                Preview::make(
+                    '',
+                    '',
+                    function (Transaction $transaction) use ($account) {
+                        return $this->getSumOfOperation($transaction, $account);
+                    }),
+                Preview::make(
+                    '',
+                    '',
+                    function (Transaction $transaction) use ($account) {
+                        return $this->getOperationDateTime($transaction);
+                    }),
             ])
             ->items($account->latestTransactions);
     }
 
-    /**
-     * @param Transaction $transaction
-     * @return mixed|string
-     *
-     */
-    private function getTitleForTransaction(Transaction $transaction): mixed
+    private function getOperationDateTime(Transaction $transaction): string
     {
-        $action = $transaction->destination_account_id ? 'Перевод клиенту Bimbo Bank' :
-            ($transaction->external_destination_bank ? 'Перевод в ' :
-                ($transaction->source_account_id ? 'Поступление от клиента Bimbo Bank' :
-                    ($transaction->external_source_bank ? 'Поступление из' :
-                        ($transaction->merchant_name ? 'Покупка' : 'Операция')
-                    )
-                )
-            );
-
-        $name = $transaction->destination_account_id ? $this->getUserName($transaction->destinationAccount()->user) :
-            ($transaction->external_destination_bank ? $transaction->external_destination_bank :
-                ($transaction->source_account_id ? $this->getUserName($transaction->sourceAccount()->user) :
-                    ($transaction->external_source_bank ? $transaction->external_source_bank :
-                        ($transaction->merchant_name ? $transaction->merchant_name : '')
-                    )
-                )
-            );
-
-        return [
-            'action' => $action,
-            'name' => $name
-        ];
+        return Carbon::parse($transaction->created_at)->translatedFormat('d F Y, H:i');
     }
 
+    private function getSumOfOperation(Transaction $transaction, Account $account): string
+    {
+        $amount = number_format((float) $transaction->amount, 2, ',', ' ');
+        $sign = '';
+
+        if ($transaction->merchant_name) {
+            $sign = '-';
+        } elseif ($transaction->source_account_id == $account->id) {
+            $sign = '-';
+        } elseif ($transaction->destination_account_id == $account->id) {
+            $sign = '+';
+        } elseif ($transaction->external_source_bank) {
+            $sign = '+';
+        } elseif ($transaction->external_destination_bank) {
+            $sign = '-';
+        }
+
+        $amount = $sign . $amount;
+
+        $color = $this->colorAmountFromStatus($transaction);
+        $icon = $this->iconFromStatus($transaction);
+
+        return '<span style="font-size: 1.1rem; font-weight: bold; ' . $color . '">' . $amount . '</span> ' . $icon;
+    }
+
+    private function iconFromStatus(Transaction $transaction): string
+    {
+        if ($transaction->status === TransactionStatusTypes::PENDING->value) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-5 h-5 mr-1" style="color: #9ca3af;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2"/>
+                    </svg>';
+        }
+
+        return '';
+    }
+
+    private function colorFromStatus(Transaction $transaction): string
+    {
+        return $transaction->status === TransactionStatusTypes::CANCELLED->value ?
+            'color: #ef4444;' :
+            '';
+    }
+
+    private function colorAmountFromStatus(Transaction $transaction): string
+    {
+        return $transaction->status === TransactionStatusTypes::CANCELLED->value ?
+            'color: #9ca3af;' :
+            '';
+    }
+
+    /**
+     * @param Transaction $transaction
+     * @param Account $currentAccount
+     * @return string
+     */
+    private function getTitleForTransaction(Transaction $transaction, Account $currentAccount): string
+    {
+        $isSource = ($transaction->source_account_id == $currentAccount->id);
+        $isDestination = ($transaction->destination_account_id == $currentAccount->id);
+
+        $name = '';
+
+        if ($transaction->merchant_name) {
+            $title = 'Покупка';
+            $name = $transaction->merchant_name;
+        }
+        elseif ($isSource && $transaction->destination_account_id) {
+            $title = 'Перевод клиенту Bimbo Bank';
+            $name = $transaction->destinationAccount->user->profile->nameInTransaction ?? 'Клиент';
+        }
+        elseif ($isDestination && $transaction->source_account_id) {
+            $title = 'Поступление от клиента Bimbo Bank';
+            $name = $transaction->sourceAccount->user->profile->nameInTransaction ?? 'Клиент';
+        }
+        elseif ($isSource && $transaction->external_destination_bank) {
+            $title = 'Перевод в';
+            $name = $transaction->external_destination_bank;
+        }
+        elseif ($isDestination && $transaction->external_source_bank) {
+            $title = 'Поступление из';
+            $name = $transaction->external_source_bank;
+        }
+        elseif ($transaction->source_account_id && $transaction->destination_account_id) {
+            $title = 'Перевод между клиентами';
+        }
+        else {
+            $title = 'Операция';
+        }
+
+        $color = $this->colorFromStatus($transaction);
+        $reject = $color ? 'Отменено' : '';
+
+        return '<div>'
+            . $title . '<br><strong>' . $name . '</strong><br>'
+            . '<span style="' . $color . '">' . $reject . '</span>'
+            . '</div>';
+    }
 
     /**
      * @param $account
@@ -137,6 +247,11 @@ class Dashboard extends Page
             $account->type->toString() . ' счет';
     }
 
+    public function statisticsByDates($dateFrom, $dateTo)
+    {
+        dd([$dateFrom, $dateTo]);
+    }
+
     /**
      * @return list<ComponentContract>
      */
@@ -146,9 +261,29 @@ class Dashboard extends Page
 
 		return [
             Box::make(
-                'Информация о счетах',
                 [
-                   ...$this->getProductCollapses()
+                    Grid::make([
+                        Column::make([
+                            ...$this->getProductCollapses()
+                        ], colSpan: 8, adaptiveColSpan: 8),
+
+                        Column::make([
+                            FormBuilder::make('', FormMethod::GET, [
+                                DateRange::make('Период', 'period')
+                                    ->fromTo('date_from', 'date_to')
+                            ])
+                                ->async('/bank/statistics')
+                            ->submit(),
+                            DonutChartMetric::make('Расходы')
+                                ->values([
+                                    'Direct' => 3250,
+                                    'Organic' => 2100,
+                                    'Social' => 1850,
+                                    'Referral' => 1200,
+                                ])
+                                ->customAttributes(['id' => 'expenses-chart'])
+                            ], colSpan: 4, adaptiveColSpan: 4),
+                    ])
                 ]
             )
         ];

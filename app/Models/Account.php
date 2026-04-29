@@ -4,17 +4,14 @@ namespace App\Models;
 
 use App\Enums\AccountStatuses;
 use App\Enums\AccountTypes;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 class Account extends Model
 {
-    use HasFactory;
-
     /**
      * @var string[]
      */
@@ -50,13 +47,11 @@ class Account extends Model
     }
 
     /**
-     * @return Builder
+     * @return Collection
      */
-    public function transactions(): Builder
+    protected function getAllTransactionsAttribute(): Collection
     {
-        return Transaction::query()
-            ->where('source_account_id', $this->id)
-            ->orWhere('destination_account_id', $this->id);
+        return $this->sentTransactions->concat($this->receivedTransactions);
     }
 
     /**

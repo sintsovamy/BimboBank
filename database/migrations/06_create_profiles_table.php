@@ -17,7 +17,7 @@ return new class extends Migration
 
             $table->string('last_name');
             $table->string('first_name');
-            $table->string('middle_name')->nullable();
+            $table->string('patronymic')->nullable();
 
             $table->boolean('gender')->nullable();
             $table->date('birthday')->nullable();

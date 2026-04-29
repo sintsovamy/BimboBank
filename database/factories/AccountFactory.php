@@ -11,8 +11,14 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 /**
  * @extends Factory<Account>
  */
+
 class AccountFactory extends Factory
 {
+    /**
+     * @var string
+     */
+    protected $model = Account::class;
+
     /**
      * Define the model's default state.
      *
@@ -21,7 +27,6 @@ class AccountFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => 1,
             'currency_id' => 1,
             'account_number' => $this->faker->numerify('####################'),
             'type' => $this->faker->randomElement(AccountTypes::values()),
@@ -66,8 +71,6 @@ class AccountFactory extends Factory
 
     private function createPurchase(Account $account): void
     {
-        $type = 'purchase';
-
         $amount = $this->faker->randomFloat(2,100, 50000);
 
         Transaction::factory()
@@ -90,6 +93,7 @@ class AccountFactory extends Factory
         switch ($type) {
             case 'internal':
                 $destinationAccount = Account::query()
+                    ->where('user_id', $account->user_id)
                     ->where('id', '!=', $account->id)
                     ->inRandomOrder()
                     ->first();
@@ -125,6 +129,7 @@ class AccountFactory extends Factory
         switch ($type) {
             case 'internal':
                 $sourceAccount = Account::query()
+                    ->where('user_id', $account->user_id)
                     ->where('id', '!=', $account->id)
                     ->inRandomOrder()
                     ->first();
