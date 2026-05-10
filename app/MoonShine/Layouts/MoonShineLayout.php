@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MoonShine\Layouts;
 
+use MoonShine\AssetManager\Js;
 use MoonShine\ColorManager\Palettes\ValentinePalette;
 use MoonShine\Laravel\Components\Layout\Profile;
 use MoonShine\Laravel\Layouts\AppLayout;
@@ -36,6 +37,8 @@ final class MoonShineLayout extends AppLayout
     {
         return [
             ...parent::assets(),
+            Js::make('https://cdn.jsdelivr.net/npm/apexcharts'),
+            Js::make('/js/moonshine-custom.js')
         ];
     }
 

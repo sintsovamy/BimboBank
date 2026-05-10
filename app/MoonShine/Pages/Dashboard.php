@@ -7,21 +7,27 @@ namespace App\MoonShine\Pages;
 use App\Enums\TransactionStatusTypes;
 use App\Models\Account;
 use App\Models\Transaction;
+use App\Services\StatisticsService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use MoonShine\Apexcharts\Components\DonutChartMetric;
+use MoonShine\Contracts\Core\DependencyInjection\CoreContract;
 use MoonShine\Contracts\Core\TypeCasts\DataWrapperContract;
+use MoonShine\Crud\Components\Fragment;
 use MoonShine\Laravel\Pages\Page;
 use MoonShine\Contracts\UI\ComponentContract;
+use MoonShine\Support\AlpineJs;
+use MoonShine\Support\Attributes\AsyncMethod;
+use MoonShine\Support\DTOs\AsyncCallback;
 use MoonShine\Support\Enums\FormMethod;
+use MoonShine\Support\Enums\JsEvent;
 use MoonShine\UI\Components\Collapse;
 use MoonShine\UI\Components\FormBuilder;
 use MoonShine\UI\Components\Layout\Box;
 use MoonShine\UI\Components\Layout\Column;
+use MoonShine\UI\Components\Layout\Div;
 use MoonShine\UI\Components\Layout\Grid;
 use MoonShine\UI\Components\Table\TableBuilder;
-use MoonShine\UI\Components\Tabs;
-use MoonShine\UI\Components\Tabs\Tab;
 use MoonShine\UI\Fields\DateRange;
 use MoonShine\UI\Fields\Preview;
 
@@ -29,6 +35,15 @@ use MoonShine\UI\Fields\Preview;
 
 class Dashboard extends Page
 {
+    public function __construct(
+        protected readonly StatisticsService $statisticsService,
+        CoreContract $core
+    )
+    {
+        parent::__construct($core);
+    }
+
+
     /**
      * @var Collection|null
      */
@@ -247,9 +262,18 @@ class Dashboard extends Page
             $account->type->toString() . ' счет';
     }
 
-    public function statisticsByDates($dateFrom, $dateTo)
+    #[AsyncMethod]
+    public function getDonutCharValues(): array
     {
-        dd([$dateFrom, $dateTo]);
+        if (isset(request()['period'])) {
+            $dateFrom = request()['period']['date_from'];
+            $dateTo = request()['period']['date_to'];
+        } else {
+            $dateFrom = auth('moonshine')->user()->created_at;
+            $dateTo = now();
+        }
+
+        return $this->statisticsService->byDateGroupByAccounts(['date_from' => $dateFrom, 'date_to' => $dateTo]);
     }
 
     /**
@@ -272,17 +296,20 @@ class Dashboard extends Page
                                 DateRange::make('Период', 'period')
                                     ->fromTo('date_from', 'date_to')
                             ])
-                                ->async('/bank/statistics')
+//                                ->asyncMethod('getDonutCharValues', events:  [AlpineJs::event(JsEvent::FRAGMENT_UPDATED, 'expenses-chart-fragment')],)
+                                ->async(
+                                    '/bank/statistics',
+                                )
+                                ->asyncSelector(['.expenses-chart'])
                             ->submit(),
-                            DonutChartMetric::make('Расходы')
-                                ->values([
-                                    'Direct' => 3250,
-                                    'Organic' => 2100,
-                                    'Social' => 1850,
-                                    'Referral' => 1200,
-                                ])
-                                ->customAttributes(['id' => 'expenses-chart'])
-                            ], colSpan: 4, adaptiveColSpan: 4),
+                                Div::make([
+                                    DonutChartMetric::make('Расходы')
+                                        ->values([
+                                            ...$this->getDonutCharValues()
+                                        ])
+                                        //->customAttributes(['class' => 'expenses-chart', 'id' => 'expenses-chart'])
+                                ])->customAttributes(['class' => 'expenses-chart', 'id' => 'expenses-chart'])
+                        ], colSpan: 4, adaptiveColSpan: 4),
                     ])
                 ]
             )

@@ -22,8 +22,8 @@ class StatisticsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'date_from' => '',
-            'date_to' => '',
+            'period.date_from' => 'required',
+            'period.date_to' => 'required|after:date_from',
         ];
     }
 }

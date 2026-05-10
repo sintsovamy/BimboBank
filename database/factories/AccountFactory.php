@@ -45,6 +45,10 @@ class AccountFactory extends Factory
             for ($i = 0; $i < 5; $i++) {
                 $this->createTransactionForAccount($account);
             }
+
+            for ($i = 0; $i < 100; $i++) {
+                $this->createPurchase($account);
+            }
         });
     }
 
@@ -54,7 +58,7 @@ class AccountFactory extends Factory
      */
     private function createTransactionForAccount(Account $account): void
     {
-        $type = $this->faker->numberBetween(0, 2);
+        $type = $this->faker->numberBetween(0, 1);
 
         switch($type) {
             case 0:
@@ -62,9 +66,6 @@ class AccountFactory extends Factory
                 break;
             case 1:
                 $this->createInTransaction($account);
-                break;
-            case 2:
-                $this->createPurchase($account);
                 break;
         }
     }

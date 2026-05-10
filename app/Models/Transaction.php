@@ -27,6 +27,7 @@ class Transaction extends Model
         'fee',
         'transaction_type',
         'status',
+        'created_at'
     ];
 
     /**
@@ -35,6 +36,14 @@ class Transaction extends Model
     public function sourceAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'source_account_id');
+    }
+
+    /**
+     * @return BelongsTo
+     */
+    public function mcc(): BelongsTo
+    {
+        return $this->belongsTo(MCC::class, 'mcc_id');
     }
 
     /**

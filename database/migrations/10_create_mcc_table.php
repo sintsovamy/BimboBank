@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('mcc', function (Blueprint $table) {
             $table->id();
 
-            $table->decimal('code');
+            $table->integer('code');
             $table->string('title');
 
             $table->timestamps();
