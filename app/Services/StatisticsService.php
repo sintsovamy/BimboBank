@@ -2,18 +2,18 @@
 
 namespace App\Services;
 
-use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 class StatisticsService
 {
     /**
      * @param array $dates
+     * @param int|null $accountId
      * @return array
      */
-   public function byDateGroupByAccounts(array $dates): array
+   public function byDateGroupByAccounts(array $dates, int $accountId = null): array
    {
-       $accountsWithTransactions = $this->accountsWithTransactions($dates);
+       $accountsWithTransactions = $this->accountsWithTransactions($dates, $accountId);
 
        $allTransactions = $this->getAllTransactions($accountsWithTransactions);
 
@@ -80,16 +80,15 @@ class StatisticsService
        return $result;
    }
 
-   private function accountsWithTransactions(array $dates)
+   private function accountsWithTransactions(array $dates, int $accountId = null)
    {
        $user = auth('moonshine')->user();
-       $dateFrom = Carbon::parse($dates['date_from'])->startOfDay();
-       $dateTo = Carbon::parse($dates['date_to'])->endOfDay();
 
        return $user
            ->accounts()
-           ->with(['sentTransactions' => function ($query) use ($dateFrom, $dateTo) {
-               $query->whereBetween('created_at', [$dateFrom, $dateTo])
+           ->when($accountId, fn ($query) => $query->where('id', '=', $accountId))
+           ->with(['sentTransactions' => function ($query) use ($dates) {
+               $query->whereBetween('created_at', [$dates['date_from'], $dates['date_to']])
                    ->with('mcc');
            }])
            ->get()

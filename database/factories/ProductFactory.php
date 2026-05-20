@@ -31,6 +31,7 @@ class ProductFactory extends Factory
             'title' => $faker->randomElement(['Зарплатный', 'Классический', 'Premium', 'Gold']),
             'type' => $faker->randomElement(ProductTypes::values()),
             'rate' => $faker->randomDigit(),
+            'card_number' => $faker->creditCardNumber()
         ];
     }
 }

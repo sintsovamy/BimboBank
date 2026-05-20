@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StatisticsRequest extends FormRequest
@@ -15,15 +16,44 @@ class StatisticsRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array
      */
     public function rules(): array
     {
         return [
-            'period.date_from' => 'required',
-            'period.date_to' => 'required|after:date_from',
+            'period.date_from' => 'nullable|date',
+            'period.date_to' => 'nullable|date|after:period.date_from',
+            'account_id' => 'nullable|string'
         ];
+    }
+
+    /**
+     * @return int|null
+     */
+    public function getAccountId(): ?int
+    {
+        $accountId = $this->validated()['account_id'] ?? null;
+
+        return $accountId === 'all' ? null : (int) $accountId;
+    }
+
+    /**
+     * @return Carbon
+     */
+    public function getDateFrom(): Carbon
+    {
+        return Carbon::parse(
+            $this->input('period.date_from') ?? auth('moonshine')->user()->created_at
+        )->startOfDay();
+    }
+
+    /**
+     * @return Carbon
+     */
+    public function getDateTo(): Carbon
+    {
+        return Carbon::parse(
+            $this->input('period.date_to') ?? now()
+        )->endOfDay();
     }
 }

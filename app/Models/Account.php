@@ -51,18 +51,21 @@ class Account extends Model
      */
     protected function getAllTransactionsAttribute(): Collection
     {
-        return $this->sentTransactions->concat($this->receivedTransactions);
+        return $this->sentTransactions
+            ->concat($this->receivedTransactions)
+            ->sortByDesc('created_at');
     }
 
     /**
+     * @param int $limit
      * @return HasMany
      */
-    public function latestTransactions(): HasMany
+    public function latestTransactions(int $limit = 3): HasMany
     {
         return $this->hasMany(Transaction::class, 'source_account_id')
             ->orWhere('destination_account_id', $this->id)
             ->orderBy('created_at', 'desc')
-            ->limit(3);
+            ->limit($limit);
     }
 
     /**

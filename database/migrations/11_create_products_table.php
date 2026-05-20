@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('account_id')->constrained('accounts')->cascadeOnDelete();
 
             $table->string('title');
+            $table->string('card_number')->nullable();
             $table->enum('type', ProductTypes::values());
 
             $table->decimal('rate', 5, 2)->default(0.0);

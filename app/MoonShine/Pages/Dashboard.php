@@ -4,32 +4,40 @@ declare(strict_types=1);
 
 namespace App\MoonShine\Pages;
 
-use App\Enums\TransactionStatusTypes;
-use App\Models\Account;
-use App\Models\Transaction;
+use App\Models\Product;
+use App\Models\Profile;
+use App\Services\ProductCollapsesBuilder;
 use App\Services\StatisticsService;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\HigherOrderTapProxy;
 use MoonShine\Apexcharts\Components\DonutChartMetric;
 use MoonShine\Contracts\Core\DependencyInjection\CoreContract;
-use MoonShine\Contracts\Core\TypeCasts\DataWrapperContract;
-use MoonShine\Crud\Components\Fragment;
+use MoonShine\Crud\JsonResponse;
 use MoonShine\Laravel\Pages\Page;
 use MoonShine\Contracts\UI\ComponentContract;
 use MoonShine\Support\AlpineJs;
 use MoonShine\Support\Attributes\AsyncMethod;
 use MoonShine\Support\DTOs\AsyncCallback;
+use MoonShine\Support\DTOs\Select\Option;
+use MoonShine\Support\DTOs\Select\Options;
 use MoonShine\Support\Enums\FormMethod;
 use MoonShine\Support\Enums\JsEvent;
-use MoonShine\UI\Components\Collapse;
+use MoonShine\Support\Enums\ToastType;
+use MoonShine\UI\Collections\Fields;
+use MoonShine\UI\Components\ActionButton;
 use MoonShine\UI\Components\FormBuilder;
 use MoonShine\UI\Components\Layout\Box;
 use MoonShine\UI\Components\Layout\Column;
 use MoonShine\UI\Components\Layout\Div;
+use MoonShine\UI\Components\Layout\Divider;
 use MoonShine\UI\Components\Layout\Grid;
-use MoonShine\UI\Components\Table\TableBuilder;
 use MoonShine\UI\Fields\DateRange;
+use MoonShine\UI\Fields\Field;
+use MoonShine\UI\Fields\Hidden;
+use MoonShine\UI\Fields\Number;
 use MoonShine\UI\Fields\Preview;
+use MoonShine\UI\Fields\Select;
+use MoonShine\UI\Fields\Text;
 
 #[\MoonShine\MenuManager\Attributes\SkipMenu]
 
@@ -37,31 +45,187 @@ class Dashboard extends Page
 {
     public function __construct(
         protected readonly StatisticsService $statisticsService,
+        protected readonly ProductCollapsesBuilder $productCollapsesBuilder,
         CoreContract $core
     )
     {
         parent::__construct($core);
     }
 
-
     /**
      * @var Collection|null
      */
     private ?Collection $accountsCache = null;
 
+    public function getTitle(): string
+    {
+        return 'Главная';
+    }
+
     /**
-     * @return array<string, string>
+     * @return list<ComponentContract>
      */
-    public function getBreadcrumbs(): array
+    protected function components(): iterable
     {
         return [
-            '#' => $this->getTitle()
+            Box::make([
+                ActionButton::make('Перевести', '')
+                    ->inModal(
+                        'Перевод',
+                        name: 'checksum-modal',
+                        components: [
+                            ActionButton::make('Между своими')
+                                ->inModal('Перевод между своими счетами',
+                                    components: [
+                                        FormBuilder::make(route('bank.transfer'))
+                                            ->async()
+                                            ->fields([
+                                                Select::make('Счет списания', 'source_account_id')
+                                                    ->options($this->getProductsForSelect())
+                                                    ->reactive(function(Fields $fields, ?string $value, Field $field, array $values): Fields {
+                                                        $accounts = $this->getAccounts();
+
+                                                        $receiveAccountOptions = [];
+                                                        foreach($accounts as $account) {
+                                                            if ($value !== (string)$account->id) {
+                                                                $receiveAccountOptions[$account->id] = $account->product->title;
+                                                            }
+                                                        }
+
+                                                        $fields->findByColumn('receive_account_id')
+                                                            ?->options($receiveAccountOptions)
+                                                            ?->setValue(null);
+
+                                                        return $fields;
+                                                    }),
+                                                Select::make('Счет назначения', 'receive_account_id')
+                                                    ->reactive(silentSelf: true)
+                                                    ->options($this->getProductsForSelect()),
+                                                Divider::make(),
+                                                Number::make('Введите сумму', 'amount')
+                                            ])
+                                            ->customAttributes(['class' => 'transaction-form'])
+                                            ->submit('Продолжить')
+                                    ]
+                                )
+                                ->customAttributes(['class' => 'w-full aspect-square flex items-center justify-center text-center p-4']),
+                            ActionButton::make('Клиенту банка')
+                                ->inModal('Перевод клиенту внутри банка',
+                                    components: [
+                                        FormBuilder::make(route('bank.transfer'))
+                                            ->async()
+                                            ->fields([
+                                                Select::make('Счет списания', 'source_account_id')
+                                                    ->options($this->getProductsForSelect(false)),
+                                                Text::make('Номер телефона', 'phone')
+                                                    ->mask('+7 (999) 999-99-99')
+                                                    ->onChangeMethod(
+                                                        'getRecipientUser',
+                                                        selector: '#receive-user-name',
+                                                        callback: AsyncCallback::with(responseHandler: 'enableAmountField')
+                                                    )
+                                                    ->customAttributes(['id' => 'phone-field']),
+                                                Text::make('Номер карты', 'card_number')
+                                                    ->mask('9999999999999999')
+                                                    ->onChangeMethod(
+                                                        'getRecipientUser',
+                                                        selector: '#receive-user-name',
+                                                        callback: AsyncCallback::with(responseHandler: 'enableAmountField')
+                                                    )
+                                                    ->customAttributes(['id' => 'card-number-field']),
+                                                Div::make([])
+                                                    ->customAttributes(['id' => 'receive-user-name']),
+                                                Number::make('Введите сумму', 'amount')
+                                                    ->disabled()
+                                                    ->name('amount-field')
+                                                    ->customAttributes(['id' => 'amount-field']),
+                                            ])
+                                            ->customAttributes(['class' => 'transaction-form'])
+                                            ->submit('Продолжить')
+                                    ]
+                                )
+                                ->customAttributes(['class' => 'w-full aspect-square flex items-center justify-center text-center p-4']),
+                        ]),
+                Grid::make([
+                    Column::make([
+                        Div::make([
+                            ...$this->productCollapsesBuilder->getCollapses($this->getAccounts())
+                        ])
+                    ], colSpan: 8, adaptiveColSpan: 8)
+                        ->customAttributes(['class' => 'left-dashboard-column']),
+
+                    Column::make([
+                        FormBuilder::make('', FormMethod::GET, [
+                            DateRange::make('Период', 'period')
+                                ->fromTo('date_from', 'date_to'),
+                            Select::make('Продукт', 'account_id')
+                                ->options(new Options($this->getProductsForSelect()))
+                                ->default('all')
+                        ])
+                            ->async('/bank/statistics',)
+                            ->asyncSelector(['.expenses-chart'])
+                            ->submit('Показать', ['class' => 'w-full']),
+
+                        Div::make([
+                            DonutChartMetric::make('Расходы по всем счетам')
+                                ->values([
+                                    ...$this->getDonutCharValues()
+                                ])
+                        ])->customAttributes(['class' => 'expenses-chart'])
+                    ], colSpan: 4, adaptiveColSpan: 4),
+                ])
+            ])
         ];
     }
 
-    public function getTitle(): string
+    #[AsyncMethod]
+    public function getRecipientUser(): JsonResponse
     {
-        return $this->title ?: 'Dashboard';
+        if (isset(request()['_data']['phone'])) {
+            $phone = preg_replace('/[^\d+]/', '', request()['_data']['phone']);
+            $profile = Profile::with('user.accounts')
+                ->where('phone_number', '=', $phone)
+                ->first();
+
+            $receiveAccount = $profile?->user->accounts->first();
+
+            if ($profile && $receiveAccount) {
+                return JsonResponse::make([
+                    'found' => true,
+                    'foundBy' => 'phone'
+                ])
+                    ->html((string)Div::make([
+                        Preview::make('Получатель', 'receiver')
+                            ->setValue($profile->nameInTransaction),
+                        Hidden::make('receive_account_id')->setValue($receiveAccount->id)
+                    ])->customAttributes(['id' => 'receive-user-name']));
+            }
+        }
+
+        if (isset(request()['_data']['card_number'])) {
+            $product = Product::query()
+                ->where('card_number', '=', request()['_data']['card_number'])
+                ->with('account.user.profile')
+                ->first();
+
+            $receiveAccount = $product->account;
+
+            if ($product && $receiveAccount) {
+                return JsonResponse::make([
+                    'found' => true,
+                    'foundBy' => 'phone'
+                ])
+                    ->html((string)Div::make([
+                        Preview::make('Получатель', 'receiver')
+                            ->setValue($product->account->user->profile->nameInTransaction),
+                        Hidden::make('receive_account_id')->setValue($receiveAccount->id)
+                    ])->customAttributes(['class' => 'receive-user-name']));
+            }
+        }
+
+        return JsonResponse::make(['found' => false])
+            ->html((string)Div::make([])->customAttributes(['class' => 'receive-user-name']))
+            ->toast('Пользователь не найден', ToastType::ERROR);
     }
 
     /**
@@ -82,186 +246,6 @@ class Dashboard extends Page
     /**
      * @return array
      */
-    private function getProductCollapses(): array
-    {
-        $collapses = [];
-        $accounts = $this->getAccounts();
-
-        foreach($accounts as $account) {
-            $collapses[] = Collapse::make(fn() => $this->getProductLabel($account), [
-                Preview::make('', 'balance',
-                    fn () => number_format(
-                    (float)$account->balance, decimals: 2, decimal_separator: ',', thousands_separator: ' ') . ' ₽'
-                ),
-                $this->getTransactionsTable($account)
-            ])
-                ->persist(false)
-                ->open(false)
-                ->icon($this->getProductIcon($account));
-        }
-
-        return $collapses;
-    }
-
-    /**
-     * @param Account $account
-     * @return TableBuilder
-     */
-    private function getTransactionsTable(Account $account): TableBuilder
-    {
-        return TableBuilder::make()
-            ->tdAttributes(fn(?DataWrapperContract $data, int $row, int $cell): array => match ($cell) {
-                0 => ['style' => 'width: 300px;'],
-                1 => ['style' => 'width: 150px;'],
-                default => [],
-            })
-            ->fields([
-                Preview::make(
-                    '',
-                    '',
-                    function (Transaction $transaction) use ($account) {
-                        return $this->getTitleForTransaction($transaction, $account);
-                    }),
-                Preview::make(
-                    '',
-                    '',
-                    function (Transaction $transaction) use ($account) {
-                        return $this->getSumOfOperation($transaction, $account);
-                    }),
-                Preview::make(
-                    '',
-                    '',
-                    function (Transaction $transaction) use ($account) {
-                        return $this->getOperationDateTime($transaction);
-                    }),
-            ])
-            ->items($account->latestTransactions);
-    }
-
-    private function getOperationDateTime(Transaction $transaction): string
-    {
-        return Carbon::parse($transaction->created_at)->translatedFormat('d F Y, H:i');
-    }
-
-    private function getSumOfOperation(Transaction $transaction, Account $account): string
-    {
-        $amount = number_format((float) $transaction->amount, 2, ',', ' ');
-        $sign = '';
-
-        if ($transaction->merchant_name) {
-            $sign = '-';
-        } elseif ($transaction->source_account_id == $account->id) {
-            $sign = '-';
-        } elseif ($transaction->destination_account_id == $account->id) {
-            $sign = '+';
-        } elseif ($transaction->external_source_bank) {
-            $sign = '+';
-        } elseif ($transaction->external_destination_bank) {
-            $sign = '-';
-        }
-
-        $amount = $sign . $amount;
-
-        $color = $this->colorAmountFromStatus($transaction);
-        $icon = $this->iconFromStatus($transaction);
-
-        return '<span style="font-size: 1.1rem; font-weight: bold; ' . $color . '">' . $amount . '</span> ' . $icon;
-    }
-
-    private function iconFromStatus(Transaction $transaction): string
-    {
-        if ($transaction->status === TransactionStatusTypes::PENDING->value) {
-            return '<svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-5 h-5 mr-1" style="color: #9ca3af;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                        <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2"/>
-                    </svg>';
-        }
-
-        return '';
-    }
-
-    private function colorFromStatus(Transaction $transaction): string
-    {
-        return $transaction->status === TransactionStatusTypes::CANCELLED->value ?
-            'color: #ef4444;' :
-            '';
-    }
-
-    private function colorAmountFromStatus(Transaction $transaction): string
-    {
-        return $transaction->status === TransactionStatusTypes::CANCELLED->value ?
-            'color: #9ca3af;' :
-            '';
-    }
-
-    /**
-     * @param Transaction $transaction
-     * @param Account $currentAccount
-     * @return string
-     */
-    private function getTitleForTransaction(Transaction $transaction, Account $currentAccount): string
-    {
-        $isSource = ($transaction->source_account_id == $currentAccount->id);
-        $isDestination = ($transaction->destination_account_id == $currentAccount->id);
-
-        $name = '';
-
-        if ($transaction->merchant_name) {
-            $title = 'Покупка';
-            $name = $transaction->merchant_name;
-        }
-        elseif ($isSource && $transaction->destination_account_id) {
-            $title = 'Перевод клиенту Bimbo Bank';
-            $name = $transaction->destinationAccount->user->profile->nameInTransaction ?? 'Клиент';
-        }
-        elseif ($isDestination && $transaction->source_account_id) {
-            $title = 'Поступление от клиента Bimbo Bank';
-            $name = $transaction->sourceAccount->user->profile->nameInTransaction ?? 'Клиент';
-        }
-        elseif ($isSource && $transaction->external_destination_bank) {
-            $title = 'Перевод в';
-            $name = $transaction->external_destination_bank;
-        }
-        elseif ($isDestination && $transaction->external_source_bank) {
-            $title = 'Поступление из';
-            $name = $transaction->external_source_bank;
-        }
-        elseif ($transaction->source_account_id && $transaction->destination_account_id) {
-            $title = 'Перевод между клиентами';
-        }
-        else {
-            $title = 'Операция';
-        }
-
-        $color = $this->colorFromStatus($transaction);
-        $reject = $color ? 'Отменено' : '';
-
-        return '<div>'
-            . $title . '<br><strong>' . $name . '</strong><br>'
-            . '<span style="' . $color . '">' . $reject . '</span>'
-            . '</div>';
-    }
-
-    /**
-     * @param $account
-     * @return string
-     */
-    private function getProductIcon($account): string
-    {
-        return $account->product ? 'credit-card' : 'banknotes';
-    }
-
-    /**
-     * @param $account
-     * @return string
-     */
-    private function getProductLabel($account): string
-    {
-        return $account->product ?
-            $account->product->title :
-            $account->type->toString() . ' счет';
-    }
-
     #[AsyncMethod]
     public function getDonutCharValues(): array
     {
@@ -277,42 +261,27 @@ class Dashboard extends Page
     }
 
     /**
-     * @return list<ComponentContract>
+     * @param bool $all
+     * @return array
      */
-    protected function components(): iterable
-	{
-        $account = $this->getAccounts()->first() ?? null;
+    private function getProductsForSelect(bool $all = true): array
+    {
+        $products = [];
 
-		return [
-            Box::make(
-                [
-                    Grid::make([
-                        Column::make([
-                            ...$this->getProductCollapses()
-                        ], colSpan: 8, adaptiveColSpan: 8),
+        if ($all) {
+            $products[] = new Option(
+                label: 'Все',
+                value: 'all',
+            );
+        }
 
-                        Column::make([
-                            FormBuilder::make('', FormMethod::GET, [
-                                DateRange::make('Период', 'period')
-                                    ->fromTo('date_from', 'date_to')
-                            ])
-//                                ->asyncMethod('getDonutCharValues', events:  [AlpineJs::event(JsEvent::FRAGMENT_UPDATED, 'expenses-chart-fragment')],)
-                                ->async(
-                                    '/bank/statistics',
-                                )
-                                ->asyncSelector(['.expenses-chart'])
-                            ->submit(),
-                                Div::make([
-                                    DonutChartMetric::make('Расходы')
-                                        ->values([
-                                            ...$this->getDonutCharValues()
-                                        ])
-                                        //->customAttributes(['class' => 'expenses-chart', 'id' => 'expenses-chart'])
-                                ])->customAttributes(['class' => 'expenses-chart', 'id' => 'expenses-chart'])
-                        ], colSpan: 4, adaptiveColSpan: 4),
-                    ])
-                ]
-            )
-        ];
-	}
+        foreach($this->getAccounts() as $account) {
+            $products[] = new Option(
+                label: $account->product->title,
+                value: (string)$account->id,
+            );
+        }
+
+        return $products;
+    }
 }

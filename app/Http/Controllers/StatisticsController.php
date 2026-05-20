@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StatisticsRequest;
 use App\Services\StatisticsService;
-use Illuminate\Http\JsonResponse;
 use MoonShine\Apexcharts\Components\DonutChartMetric;
+use MoonShine\Crud\JsonResponse;
 use MoonShine\UI\Components\Layout\Div;
 
 class StatisticsController extends Controller
@@ -18,17 +18,20 @@ class StatisticsController extends Controller
 
     /**
      * @param StatisticsRequest $request
-     * @return \MoonShine\Crud\JsonResponse
+     * @return JsonResponse
      */
-    public function statistics(StatisticsRequest $request): \MoonShine\Crud\JsonResponse
+    public function statistics(StatisticsRequest $request): JsonResponse
     {
-        $data = $this->statisticsService->byDateGroupByAccounts($request->validated()['period']);
+        $data = $this->statisticsService->byDateGroupByAccounts(
+            ['date_from' => $request->getDateFrom(), 'date_to' => $request->getDateTo()],
+            $request->getAccountId()
+        );
 
         $html = (string) Div::make([
-            DonutChartMetric::make('Расходы')
+            DonutChartMetric::make('Все расходы')
                 ->values($data)
         ]);
 
-        return \MoonShine\Crud\JsonResponse::make()->html($html);
+        return JsonResponse::make()->html($html);
     }
 }

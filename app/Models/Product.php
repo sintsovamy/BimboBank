@@ -17,7 +17,8 @@ class Product extends Model
         'type',
         'rate',
         'limit',
-        'end_date'
+        'end_date',
+        'card_number'
     ];
 
     /**
