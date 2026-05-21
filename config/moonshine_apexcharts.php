@@ -22,7 +22,7 @@ return [
     | 10: #A300D6, #7D02EB, #5653FE, #2983FF, #00B1F2 (blue/purple theme)
     */
 
-    'default_palette' => env('APEXCHARTS_DEFAULT_PALETTE', 6),
+    'default_palette' => env('APEXCHARTS_DEFAULT_PALETTE', 8),
 
     /*
     |--------------------------------------------------------------------------

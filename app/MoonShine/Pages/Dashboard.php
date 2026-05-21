@@ -9,19 +9,18 @@ use App\Models\Profile;
 use App\Services\ProductCollapsesBuilder;
 use App\Services\StatisticsService;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\HigherOrderTapProxy;
 use MoonShine\Apexcharts\Components\DonutChartMetric;
+use MoonShine\Apexcharts\Components\LineChartMetric;
+use MoonShine\Apexcharts\Support\SeriesItem;
 use MoonShine\Contracts\Core\DependencyInjection\CoreContract;
 use MoonShine\Crud\JsonResponse;
 use MoonShine\Laravel\Pages\Page;
 use MoonShine\Contracts\UI\ComponentContract;
-use MoonShine\Support\AlpineJs;
 use MoonShine\Support\Attributes\AsyncMethod;
 use MoonShine\Support\DTOs\AsyncCallback;
 use MoonShine\Support\DTOs\Select\Option;
 use MoonShine\Support\DTOs\Select\Options;
 use MoonShine\Support\Enums\FormMethod;
-use MoonShine\Support\Enums\JsEvent;
 use MoonShine\Support\Enums\ToastType;
 use MoonShine\UI\Collections\Fields;
 use MoonShine\UI\Components\ActionButton;
@@ -151,7 +150,7 @@ class Dashboard extends Page
                         Div::make([
                             ...$this->productCollapsesBuilder->getCollapses($this->getAccounts())
                         ])
-                    ], colSpan: 8, adaptiveColSpan: 8)
+                    ], colSpan: 7, adaptiveColSpan: 7)
                         ->customAttributes(['class' => 'left-dashboard-column']),
 
                     Column::make([
@@ -168,11 +167,33 @@ class Dashboard extends Page
 
                         Div::make([
                             DonutChartMetric::make('Расходы по всем счетам')
+                                ->colors(['#FFC0CB', '#FFB6C1', '#FF69B4', '#F6B8B8', '#F4B4C4', '#FC8EAC', '#E30B5C', '#CA2C92'])
                                 ->values([
                                     ...$this->getDonutCharValues()
-                                ])
+                                ]),
+                            LineChartMetric::make('Заказы')
+                                ->series([
+                                    SeriesItem::make('Выручка 1', [
+                                        now()->format('Y-m-d') => 100,
+                                        now()->addDay()->format('Y-m-d') => 200,
+                                        now()->addDays(2)->format('Y-m-d') => 500,
+                                        now()->addDays(3)->format('Y-m-d') => 700,
+                                    ])->color('#FFB6C1'),
+                                    SeriesItem::make('Выручка 2', [
+                                        now()->format('Y-m-d') => 300,
+                                        now()->addDay()->format('Y-m-d') => 400,
+                                        now()->addDays(2)->format('Y-m-d') => 300,
+                                        now()->addDays(3)->format('Y-m-d') => 800,
+                                    ])->color('#F6B8B8'),
+                                    SeriesItem::make('Выручка 3', [
+                                        now()->format('Y-m-d') => 400,
+                                        now()->addDay()->format('Y-m-d') => 500,
+                                        now()->addDays(2)->format('Y-m-d') => 400,
+                                        now()->addDays(3)->format('Y-m-d') => 600,
+                                    ])->color('#FC8EAC'),
+                                ]),
                         ])->customAttributes(['class' => 'expenses-chart'])
-                    ], colSpan: 4, adaptiveColSpan: 4),
+                    ], colSpan: 5, adaptiveColSpan: 5),
                 ])
             ])
         ];

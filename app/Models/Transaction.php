@@ -25,7 +25,6 @@ class Transaction extends Model
         'mcc_id',
         'currency_id',
         'fee',
-        'transaction_type',
         'status',
         'created_at'
     ];

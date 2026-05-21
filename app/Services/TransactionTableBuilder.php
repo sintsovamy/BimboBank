@@ -26,7 +26,7 @@ class TransactionTableBuilder
         return TableBuilder::make()
             ->simple()
             ->tdAttributes(fn(?DataWrapperContract $data, int $row, int $cell): array => match ($cell) {
-                0 => ['style' => 'width: 300px;'],
+                0 => ['style' => 'width: 200px;'],
                 1 => ['style' => 'width: 150px;'],
                 default => [],
             })

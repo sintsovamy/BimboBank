@@ -37,7 +37,6 @@ return new class extends Migration
             $table->decimal('amount', 19, 4);
             $table->foreignId('currency_id')->constrained('currencies')->cascadeOnDelete();
 
-            $table->enum('transaction_type', TransactionTypes::values());
             $table->enum('status', TransactionStatusTypes::values())->default('pending');
 
             // timestamps

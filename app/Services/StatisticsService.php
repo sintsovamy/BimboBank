@@ -29,18 +29,13 @@ class StatisticsService
         $stat = [];
 
         foreach ($transactions as $transaction) {
+            $amount = (int)abs($transaction->amount);
+
             if ($transaction->mcc) {
                 $category = $this->getCategoryByMcc($transaction->mcc->code);
-
-                if (!isset($stat[$category])) {
-                    $stat[$category] = 0;
-                }
-                $stat[$category]++;
+                $stat[$category] = ($stat[$category] ?? 0) + $amount;
             } else {
-                if (!isset($stat['Переводы'])) {
-                    $stat['Переводы'] = 0;
-                }
-                $stat['Переводы']++;
+                $stat['Переводы'] = ($stat['Переводы'] ?? 0) + $amount;
             }
         }
 

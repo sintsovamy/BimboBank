@@ -28,7 +28,6 @@ class TransferService
                     'destination_account_id' => $receive->id,
                     'amount' => $amount,
                     'currency_id' => 1,
-                    'transaction_type' => TransactionTypes::OUTGOING->value,
                     'status' => TransactionStatusTypes::COMPLETED->value,
                     'completed_at' => now()
                 ]);
