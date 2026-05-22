@@ -64,14 +64,13 @@ class TransactionFactory extends Factory
     /**
      * @return $this
      */
-    public function externalTransfer(string $transactionType): static
+    public function externalTransfer(): static
     {
         $faker = Faker::create('ru_RU');
 
-        return $this->state(function (array $attributes) use ($transactionType, $faker) {
+        return $this->state(function (array $attributes) use ($faker) {
 
             return [
-                'transaction_type' => $transactionType,
                 'destination_account_id' => null,
                 'external_destination_bank' => $faker->bank(),
             ];
@@ -81,11 +80,10 @@ class TransactionFactory extends Factory
     /**
      * @return $this
      */
-    public function internalTransfer(string $transactionType): static
+    public function internalTransfer(): static
     {
         return $this->state(function (array $attributes) use ($transactionType) {
             return [
-                'transaction_type' => $transactionType,
                 'destination_account_id' => null,
                 'external_destination_value' => null,
             ];
@@ -99,7 +97,6 @@ class TransactionFactory extends Factory
             $mcc_id = MCC::query()->inRandomOrder()->first()->id;
 
             return [
-                'transaction_type' => 'purchase',
                 'merchant_name' => $merchantName,
                 'mcc_id' => $mcc_id,
                 'destination_account_id' => null,

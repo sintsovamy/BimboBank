@@ -22,7 +22,7 @@ class StatisticsRequest extends FormRequest
     {
         return [
             'period.date_from' => 'nullable|date',
-            'period.date_to' => 'nullable|date|after:period.date_from',
+            'period.date_to' => 'nullable|date|after_or_equal:period.date_from',
             'account_id' => 'nullable|string'
         ];
     }

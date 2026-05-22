@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\TransferRequest;
 use App\Models\Account;
 use App\Services\TransferService;
-use Illuminate\Validation\ValidationException;
 use MoonShine\Crud\JsonResponse;
 use MoonShine\Support\Enums\ToastType;
+use Throwable;
 
 class TransferController extends Controller
 {
@@ -21,12 +21,12 @@ class TransferController extends Controller
      * @param TransferRequest $request
      * @return JsonResponse
      */
-    public function transfer(TransferRequest $request): JsonResponse
+    public function __invoke(TransferRequest $request): JsonResponse
     {
         try {
             $this->transferService->transfer(
-                source: Account::findOrFail($request->input('source_account_id')),
-                receive: Account::findOrFail($request->input('receive_account_id')),
+                source: Account::query()->findOrFail($request->input('source_account_id')),
+                receive: Account::query()->findOrFail($request->input('receive_account_id')),
                 amount: $request->input('amount')
             );
 
@@ -34,7 +34,7 @@ class TransferController extends Controller
                 ->redirect('/')
                 ->toast('Перевод выполнен', ToastType::SUCCESS);
 
-        } catch (ValidationException $e) {
+        } catch (Throwable $e) {
             return JsonResponse::make()->toast($e->getMessage(), ToastType::ERROR);
         }
     }

@@ -17,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->group(base_path('routes/moonshine.php'));
         },
     )
+    ->withEvents(
+        discover: [
+            __DIR__.'/../app/Listeners'
+        ]
+    )
     ->withMiddleware(function (Middleware $middleware): void {
         //
     })

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Enums;
 
 enum TransactionStatusTypes: string
@@ -34,6 +35,3 @@ enum TransactionStatusTypes: string
         ];
     }
 }
-
-
-

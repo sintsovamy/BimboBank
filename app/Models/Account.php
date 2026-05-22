@@ -95,7 +95,7 @@ class Account extends Model
     /**
      * @return BelongsTo
      */
-    public function concurrency(): BelongsTo
+    public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
     }

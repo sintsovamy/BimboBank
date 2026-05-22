@@ -48,6 +48,7 @@ class ProductCollapsesBuilder
                 Grid::make([
                     Column::make([
                         ActionButton::make('Перейти', '/bank/account/' . $account->id)
+                            ->customAttributes(['style' => 'background-color:#FF69B4; color: white;'])
                             ->async(selector: ['.left-dashboard-column'])
                     ], colSpan: 2, adaptiveColSpan: 2),
                 ]),

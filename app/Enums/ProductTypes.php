@@ -34,6 +34,3 @@ enum ProductTypes: string
         ];
     }
 }
-
-
-

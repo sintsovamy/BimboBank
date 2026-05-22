@@ -133,6 +133,18 @@ return [
             'level' => 'debug',
         ],
 
+        'transactions' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/transactions.log'),
+            'level' => 'info'
+        ],
+
+        'auth' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/auth.log'),
+            'level' => 'info'
+        ]
+
     ],
 
 ];

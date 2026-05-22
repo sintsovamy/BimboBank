@@ -10,6 +10,9 @@ class Transaction extends Model
 {
     use HasFactory;
 
+    /**
+     * @var string[]
+     */
     protected $fillable = [
         'source_account_id',
         'destination_account_id',

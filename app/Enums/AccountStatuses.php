@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Enums;
 
 enum AccountStatuses: string
@@ -40,6 +41,3 @@ enum AccountStatuses: string
         ];
     }
 }
-
-
-

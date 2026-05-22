@@ -24,11 +24,13 @@ use MoonShine\Support\Enums\FormMethod;
 use MoonShine\Support\Enums\ToastType;
 use MoonShine\UI\Collections\Fields;
 use MoonShine\UI\Components\ActionButton;
+use MoonShine\UI\Components\Collapse;
 use MoonShine\UI\Components\FormBuilder;
 use MoonShine\UI\Components\Layout\Box;
 use MoonShine\UI\Components\Layout\Column;
 use MoonShine\UI\Components\Layout\Div;
 use MoonShine\UI\Components\Layout\Divider;
+use MoonShine\UI\Components\Layout\Flex;
 use MoonShine\UI\Components\Layout\Grid;
 use MoonShine\UI\Fields\DateRange;
 use MoonShine\UI\Fields\Field;
@@ -69,130 +71,129 @@ class Dashboard extends Page
         return [
             Box::make([
                 ActionButton::make('Перевести', '')
+                    ->customAttributes([
+                        'style' => 'background-color:#FF69B4; color: white;'
+                    ])
                     ->inModal(
                         'Перевод',
                         name: 'checksum-modal',
                         components: [
-                            ActionButton::make('Между своими')
-                                ->inModal('Перевод между своими счетами',
-                                    components: [
-                                        FormBuilder::make(route('bank.transfer'))
-                                            ->async()
-                                            ->fields([
-                                                Select::make('Счет списания', 'source_account_id')
-                                                    ->options($this->getProductsForSelect())
-                                                    ->reactive(function(Fields $fields, ?string $value, Field $field, array $values): Fields {
-                                                        $accounts = $this->getAccounts();
+                            Flex::make([
+                                ActionButton::make('Между своими')
+                                    ->customAttributes(['style' => 'background-color:#FF69B4; color: white;'])
+                                    ->inModal('Перевод между своими счетами',
+                                        components: [
+                                            FormBuilder::make(route('bank.transfer'))
+                                                ->async()
+                                                ->fields([
+                                                    Select::make('Счет списания', 'source_account_id')
+                                                        ->options($this->getProductsForSelect())
+                                                        ->reactive(function(Fields $fields, ?string $value, Field $field, array $values): Fields {
+                                                            $accounts = $this->getAccounts();
 
-                                                        $receiveAccountOptions = [];
-                                                        foreach($accounts as $account) {
-                                                            if ($value !== (string)$account->id) {
-                                                                $receiveAccountOptions[$account->id] = $account->product->title;
+                                                            $receiveAccountOptions = [];
+                                                            foreach($accounts as $account) {
+                                                                if ($value !== (string)$account->id) {
+                                                                    $receiveAccountOptions[$account->id] = $account->product->title;
+                                                                }
                                                             }
-                                                        }
 
-                                                        $fields->findByColumn('receive_account_id')
-                                                            ?->options($receiveAccountOptions)
-                                                            ?->setValue(null);
+                                                            $fields->findByColumn('receive_account_id')
+                                                                ?->options($receiveAccountOptions)
+                                                                ?->setValue(null);
 
-                                                        return $fields;
-                                                    }),
-                                                Select::make('Счет назначения', 'receive_account_id')
-                                                    ->reactive(silentSelf: true)
-                                                    ->options($this->getProductsForSelect()),
-                                                Divider::make(),
-                                                Number::make('Введите сумму', 'amount')
-                                            ])
-                                            ->customAttributes(['class' => 'transaction-form'])
-                                            ->submit('Продолжить')
-                                    ]
-                                )
-                                ->customAttributes(['class' => 'w-full aspect-square flex items-center justify-center text-center p-4']),
-                            ActionButton::make('Клиенту банка')
-                                ->inModal('Перевод клиенту внутри банка',
-                                    components: [
-                                        FormBuilder::make(route('bank.transfer'))
-                                            ->async()
-                                            ->fields([
-                                                Select::make('Счет списания', 'source_account_id')
-                                                    ->options($this->getProductsForSelect(false)),
-                                                Text::make('Номер телефона', 'phone')
-                                                    ->mask('+7 (999) 999-99-99')
-                                                    ->onChangeMethod(
-                                                        'getRecipientUser',
-                                                        selector: '#receive-user-name',
-                                                        callback: AsyncCallback::with(responseHandler: 'enableAmountField')
-                                                    )
-                                                    ->customAttributes(['id' => 'phone-field']),
-                                                Text::make('Номер карты', 'card_number')
-                                                    ->mask('9999999999999999')
-                                                    ->onChangeMethod(
-                                                        'getRecipientUser',
-                                                        selector: '#receive-user-name',
-                                                        callback: AsyncCallback::with(responseHandler: 'enableAmountField')
-                                                    )
-                                                    ->customAttributes(['id' => 'card-number-field']),
-                                                Div::make([])
-                                                    ->customAttributes(['id' => 'receive-user-name']),
-                                                Number::make('Введите сумму', 'amount')
-                                                    ->disabled()
-                                                    ->name('amount-field')
-                                                    ->customAttributes(['id' => 'amount-field']),
-                                            ])
-                                            ->customAttributes(['class' => 'transaction-form'])
-                                            ->submit('Продолжить')
-                                    ]
-                                )
-                                ->customAttributes(['class' => 'w-full aspect-square flex items-center justify-center text-center p-4']),
+                                                            return $fields;
+                                                        }),
+                                                    Select::make('Счет назначения', 'receive_account_id')
+                                                        ->reactive(silentSelf: true)
+                                                        ->options($this->getProductsForSelect()),
+                                                    Divider::make(),
+                                                    Number::make('Введите сумму', 'amount')
+                                                ])
+                                                ->customAttributes([
+                                                    'class' => 'transaction-form'
+                                                ])
+                                                ->submit('Продолжить', ['style' => 'background-color:#FF69B4; color: white;'])
+                                        ]
+                                    )
+                                    ->customAttributes(['class' => 'w-full aspect-square flex items-center justify-center text-center p-4']),
+                                ActionButton::make('Клиенту банка')
+                                    ->customAttributes(['style' => 'background-color:#FF69B4; color: white;'])
+                                    ->inModal('Перевод клиенту внутри банка',
+                                        components: [
+                                            FormBuilder::make(route('bank.transfer'))
+                                                ->async()
+                                                ->fields([
+                                                    Select::make('Счет списания', 'source_account_id')
+                                                        ->options($this->getProductsForSelect(false)),
+                                                    Text::make('Номер телефона', 'phone')
+                                                        ->mask('+7 (999) 999-99-99')
+                                                        ->onChangeMethod(
+                                                            'getRecipientUser',
+                                                            selector: '#receive-user-name',
+                                                            callback: AsyncCallback::with(responseHandler: 'enableAmountField')
+                                                        )
+                                                        ->customAttributes(['id' => 'phone-field']),
+                                                    Text::make('Номер карты', 'card_number')
+                                                        ->mask('9999999999999999')
+                                                        ->onChangeMethod(
+                                                            'getRecipientUser',
+                                                            selector: '#receive-user-name',
+                                                            callback: AsyncCallback::with(responseHandler: 'enableAmountField')
+                                                        )
+                                                        ->customAttributes(['id' => 'card-number-field']),
+                                                    Div::make([])
+                                                        ->customAttributes(['id' => 'receive-user-name']),
+                                                    Number::make('Введите сумму', 'amount')
+                                                        ->disabled()
+                                                        ->name('amount-field')
+                                                        ->customAttributes(['id' => 'amount-field']),
+                                                ])
+                                                ->customAttributes(['class' => 'transaction-form'])
+                                                ->submit('Продолжить', ['style' => 'background-color:#FF69B4; color: white;'])
+                                        ]
+                                    )
+                                    ->customAttributes(['class' => 'w-full aspect-square flex items-center justify-center text-center p-4']),
+                            ])->class('grid grid-cols-2 gap-4')
                         ]),
                 Grid::make([
                     Column::make([
                         Div::make([
-                            ...$this->productCollapsesBuilder->getCollapses($this->getAccounts())
-                        ])
+                            Collapse::make('Счета', [
+                                ...$this->productCollapsesBuilder->getCollapses($this->getAccounts())
+                            ])
+                        ]),
+                        LineChartMetric::make('Траты и поступления за месяц')
+                            ->series([
+                                ...$this->getLineChartValues()
+                            ]),
                     ], colSpan: 7, adaptiveColSpan: 7)
                         ->customAttributes(['class' => 'left-dashboard-column']),
 
                     Column::make([
-                        FormBuilder::make('', FormMethod::GET, [
-                            DateRange::make('Период', 'period')
-                                ->fromTo('date_from', 'date_to'),
-                            Select::make('Продукт', 'account_id')
-                                ->options(new Options($this->getProductsForSelect()))
-                                ->default('all')
-                        ])
-                            ->async('/bank/statistics',)
-                            ->asyncSelector(['.expenses-chart'])
-                            ->submit('Показать', ['class' => 'w-full']),
+                        Box::make([
+                            FormBuilder::make('', FormMethod::GET, [
+                                DateRange::make('Период', 'period')
+                                    ->fromTo('date_from', 'date_to'),
+                                Select::make('Продукт', 'account_id')
+                                    ->options(new Options($this->getProductsForSelect()))
+                                    ->default('all')
+                            ])
+                                ->async('/bank/statistics',)
+                                ->asyncSelector(['.expenses-chart'])
+                                ->submit('Показать', [
+                                    'class' => 'w-full',
+                                    'style' => 'background-color:#FF69B4; color: white;'
+                                ]),
 
-                        Div::make([
-                            DonutChartMetric::make('Расходы по всем счетам')
-                                ->colors(['#FFC0CB', '#FFB6C1', '#FF69B4', '#F6B8B8', '#F4B4C4', '#FC8EAC', '#E30B5C', '#CA2C92'])
-                                ->values([
-                                    ...$this->getDonutCharValues()
-                                ]),
-                            LineChartMetric::make('Заказы')
-                                ->series([
-                                    SeriesItem::make('Выручка 1', [
-                                        now()->format('Y-m-d') => 100,
-                                        now()->addDay()->format('Y-m-d') => 200,
-                                        now()->addDays(2)->format('Y-m-d') => 500,
-                                        now()->addDays(3)->format('Y-m-d') => 700,
-                                    ])->color('#FFB6C1'),
-                                    SeriesItem::make('Выручка 2', [
-                                        now()->format('Y-m-d') => 300,
-                                        now()->addDay()->format('Y-m-d') => 400,
-                                        now()->addDays(2)->format('Y-m-d') => 300,
-                                        now()->addDays(3)->format('Y-m-d') => 800,
-                                    ])->color('#F6B8B8'),
-                                    SeriesItem::make('Выручка 3', [
-                                        now()->format('Y-m-d') => 400,
-                                        now()->addDay()->format('Y-m-d') => 500,
-                                        now()->addDays(2)->format('Y-m-d') => 400,
-                                        now()->addDays(3)->format('Y-m-d') => 600,
-                                    ])->color('#FC8EAC'),
-                                ]),
-                        ])->customAttributes(['class' => 'expenses-chart'])
+                            Div::make([
+                                DonutChartMetric::make('Расходы категориям')
+                                    ->colors(['#FFC0CB', '#FFB6C1', '#FF69B4', '#F6B8B8', '#F4B4C4', '#FC8EAC', '#E30B5C', '#CA2C92'])
+                                    ->values([
+                                        ...$this->getDonutChartValues()
+                                    ]),
+                            ])->customAttributes(['class' => 'expenses-chart']),
+                        ]),
                     ], colSpan: 5, adaptiveColSpan: 5),
                 ])
             ])
@@ -258,6 +259,7 @@ class Dashboard extends Page
             $user = auth()->user();
             $this->accountsCache = $user->accounts()
                 ->with(['product', 'latestTransactions'])
+                ->orderBy('created_at')
                 ->get();
         }
 
@@ -268,17 +270,43 @@ class Dashboard extends Page
      * @return array
      */
     #[AsyncMethod]
-    public function getDonutCharValues(): array
+    public function getDonutChartValues(): array
     {
         if (isset(request()['period'])) {
             $dateFrom = request()['period']['date_from'];
             $dateTo = request()['period']['date_to'];
         } else {
-            $dateFrom = auth('moonshine')->user()->created_at;
+            $dateFrom = now()->startOfMonth();
             $dateTo = now();
         }
 
         return $this->statisticsService->byDateGroupByAccounts(['date_from' => $dateFrom, 'date_to' => $dateTo]);
+    }
+
+    /**
+     * @return array
+     */
+    #[AsyncMethod]
+    public function getLineChartValues(): array
+    {
+        if (isset(request()['period'])) {
+            $dateFrom = request()['period']['date_from'];
+            $dateTo = request()['period']['date_to'];
+        } else {
+            $dateFrom = now()->startOfMonth();
+            $dateTo = now();
+        }
+
+        $chartData = $this->statisticsService->transactionsGroupByDay(['date_from' => $dateFrom, 'date_to' => $dateTo]);
+
+        return [
+            SeriesItem::make('Расходы', [
+                ...$chartData['sentStat']
+            ])->color('#FF69B4'),
+            SeriesItem::make('Доходы', [
+                ...$chartData['receivedStat']
+            ])->color('#F6B8B8')
+        ];
     }
 
     /**

@@ -34,6 +34,3 @@ enum AccountTypes: string
         ];
     }
 }
-
-
-

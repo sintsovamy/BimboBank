@@ -20,16 +20,19 @@ class StatisticsController extends Controller
      * @param StatisticsRequest $request
      * @return JsonResponse
      */
-    public function statistics(StatisticsRequest $request): JsonResponse
+    public function __invoke(StatisticsRequest $request): JsonResponse
     {
-        $data = $this->statisticsService->byDateGroupByAccounts(
+        $donutChartData = $this->statisticsService->byDateGroupByAccounts(
             ['date_from' => $request->getDateFrom(), 'date_to' => $request->getDateTo()],
             $request->getAccountId()
         );
 
         $html = (string) Div::make([
-            DonutChartMetric::make('Все расходы')
-                ->values($data)
+            DonutChartMetric::make('Расходы категориям')
+                ->colors(['#FFC0CB', '#FFB6C1', '#FF69B4', '#F6B8B8', '#F4B4C4', '#FC8EAC', '#E30B5C', '#CA2C92'])
+                ->values([
+                    ...$donutChartData
+                ]),
         ]);
 
         return JsonResponse::make()->html($html);

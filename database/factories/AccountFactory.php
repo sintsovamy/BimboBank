@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Enums\AccountTypes;
-use App\Enums\TransactionTypes;
 use App\Models\Account;
 use App\Models\Transaction;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -100,7 +99,6 @@ class AccountFactory extends Factory
                     ->first();
 
                 Transaction::factory()
-                    ->internalTransfer(TransactionTypes::OUTGOING->value)
                     ->withSourceAccount($account->id)
                     ->withDestinationAccount($destinationAccount->id)
                     ->withAmount($amount)
@@ -109,7 +107,6 @@ class AccountFactory extends Factory
 
             case 'external':
                 Transaction::factory()
-                    ->externalTransfer(TransactionTypes::OUTGOING->value)
                     ->withSourceAccount($account->id)
                     ->withAmount($amount)
                     ->create();
@@ -136,7 +133,6 @@ class AccountFactory extends Factory
                     ->first();
 
                 Transaction::factory()
-                    ->internalTransfer(TransactionTypes::INCOMING->value)
                     ->withSourceAccount($sourceAccount->id)
                     ->withDestinationAccount($account->id)
                     ->withAmount($amount)
@@ -145,7 +141,6 @@ class AccountFactory extends Factory
 
             case 'external':
                 Transaction::factory()
-                    ->externalTransfer(TransactionTypes::INCOMING->value)
                     ->withDestinationAccount($account->id)
                     ->withAmount($amount)
                     ->create();

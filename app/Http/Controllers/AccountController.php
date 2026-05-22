@@ -18,7 +18,7 @@ class AccountController extends Controller
      * @param Account $account
      * @return JsonResponse
      */
-    public function item(Account $account): JsonResponse
+    public function __invoke(Account $account): JsonResponse
     {
         $leftColumn = $this->prepareHtmlService->prepareAccountHtml($account);
 
