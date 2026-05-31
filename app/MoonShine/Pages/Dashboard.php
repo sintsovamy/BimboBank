@@ -9,6 +9,8 @@ use App\Models\Profile;
 use App\Services\ProductCollapsesBuilder;
 use App\Services\StatisticsService;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
+use JetBrains\PhpStorm\NoReturn;
 use MoonShine\Apexcharts\Components\DonutChartMetric;
 use MoonShine\Apexcharts\Components\LineChartMetric;
 use MoonShine\Apexcharts\Support\SeriesItem;
@@ -32,6 +34,7 @@ use MoonShine\UI\Components\Layout\Div;
 use MoonShine\UI\Components\Layout\Divider;
 use MoonShine\UI\Components\Layout\Flex;
 use MoonShine\UI\Components\Layout\Grid;
+use MoonShine\UI\Components\Metrics\Wrapped\ValueMetric;
 use MoonShine\UI\Fields\DateRange;
 use MoonShine\UI\Fields\Field;
 use MoonShine\UI\Fields\Hidden;
@@ -58,10 +61,32 @@ class Dashboard extends Page
      */
     private ?Collection $accountsCache = null;
 
+    /**
+     * @var array|null
+     */
+    private ?array $stats = null;
+
     public function getTitle(): string
     {
         return 'Главная';
     }
+
+    /**
+     * @return void
+     */
+    #[NoReturn]
+    protected function prepareBeforeRender(): void
+    {
+        parent::prepareBeforeRender();
+
+        $this->stats = Cache::remember('stat', now()->addHours(24), function() {
+            return $this->statisticsService->getStats([
+                'date_from' => now()->startOfMonth(),
+                'date_to' => now()
+            ]);
+        });
+    }
+
 
     /**
      * @return list<ComponentContract>
@@ -88,25 +113,18 @@ class Dashboard extends Page
                                                 ->fields([
                                                     Select::make('Счет списания', 'source_account_id')
                                                         ->options($this->getProductsForSelect())
-                                                        ->reactive(function(Fields $fields, ?string $value, Field $field, array $values): Fields {
-                                                            $accounts = $this->getAccounts();
-
-                                                            $receiveAccountOptions = [];
-                                                            foreach($accounts as $account) {
-                                                                if ($value !== (string)$account->id) {
-                                                                    $receiveAccountOptions[$account->id] = $account->product->title;
-                                                                }
-                                                            }
-
-                                                            $fields->findByColumn('receive_account_id')
-                                                                ?->options($receiveAccountOptions)
-                                                                ?->setValue(null);
-
-                                                            return $fields;
-                                                        }),
+                                                        ->onChangeMethod(
+                                                            'getRecipientUser',
+                                                            selector: '#receive-user-name',
+                                                            callback: AsyncCallback::with(responseHandler: 'enableAmountField')
+                                                        ),
                                                     Select::make('Счет назначения', 'receive_account_id')
                                                         ->reactive(silentSelf: true)
-                                                        ->options($this->getProductsForSelect()),
+                                                        ->onChangeMethod(
+                                                            'getRecipientUser',
+                                                            selector: '#receive-user-name',
+                                                            callback: AsyncCallback::with(responseHandler: 'enableAmountField')
+                                                        ),
                                                     Divider::make(),
                                                     Number::make('Введите сумму', 'amount')
                                                 ])
@@ -163,14 +181,27 @@ class Dashboard extends Page
                                 ...$this->productCollapsesBuilder->getCollapses($this->getAccounts())
                             ])
                         ]),
-                        LineChartMetric::make('Траты и поступления за месяц')
+                        LineChartMetric::make('Детализация по дням')
                             ->series([
-                                ...$this->getLineChartValues()
+                                SeriesItem::make('Расходы', [
+                                    ...$this->stats['lineStat']['sentStat']
+                                ])->color('#FF69B4'),
+                                SeriesItem::make('Доходы', [
+                                    ...$this->stats['lineStat']['receivedStat']
+                                ])->color('#F6B8B8')
                             ]),
                     ], colSpan: 7, adaptiveColSpan: 7)
                         ->customAttributes(['class' => 'left-dashboard-column']),
 
                     Column::make([
+                        ValueMetric::make('Самая популярная категория')
+                            ->value($this->stats['metrics']['mostPopularCategory']),
+                        ValueMetric::make('Доход за месяц')
+                            ->value($this->stats['metrics']['receivedSum'])
+                            ->valueFormat(fn(int $value): string => number_format($value, 2, ',', ' ')),
+                        ValueMetric::make('Траты за месяц')
+                            ->value($this->stats['metrics']['sentSum'])
+                            ->valueFormat(fn(int $value): string => number_format($value, 2, ',', ' ')),
                         Box::make([
                             FormBuilder::make('', FormMethod::GET, [
                                 DateRange::make('Период', 'period')
@@ -179,7 +210,7 @@ class Dashboard extends Page
                                     ->options(new Options($this->getProductsForSelect()))
                                     ->default('all')
                             ])
-                                ->async('/bank/statistics',)
+                                ->async('/bank/statistics')
                                 ->asyncSelector(['.expenses-chart'])
                                 ->submit('Показать', [
                                     'class' => 'w-full',
@@ -190,7 +221,7 @@ class Dashboard extends Page
                                 DonutChartMetric::make('Расходы категориям')
                                     ->colors(['#FFC0CB', '#FFB6C1', '#FF69B4', '#F6B8B8', '#F4B4C4', '#FC8EAC', '#E30B5C', '#CA2C92'])
                                     ->values([
-                                        ...$this->getDonutChartValues()
+                                        ...$this->stats['donutStat']
                                     ]),
                             ])->customAttributes(['class' => 'expenses-chart']),
                         ]),
@@ -250,14 +281,48 @@ class Dashboard extends Page
             ->toast('Пользователь не найден', ToastType::ERROR);
     }
 
+//    #[AsyncMethod]
+//    public function removeSelectedAccount(): JsonResponse
+//    {
+//        if (isset(request()['_data']['source_account_id'])) {
+//            $removeId = request()->integer(['_data']['source_account_id']);
+//            dd($removeId)
+//            return JsonResponse::make()
+//                ->html((string)Select::make('Счет назначения', 'receive_account_id')
+//                    ->options($this->getProductsForSelect(all: false, removeId: $removeId))
+//                    ->customAttributes([
+//                        'class' => 'receive-account-field'
+//                    ])
+//                    ->onChangeMethod(
+//                        'removeSelectedAccount',
+//                        selector: '#source-account_field'
+//                    ));
+//        }
+//
+//        $removeId = request()->integer(['_data']['receive_account_id']);
+//
+//        return JsonResponse::make()
+//            ->html((string)Select::make('Счет списания', 'source_account_id')
+//                ->options($this->getProductsForSelect(all: false, removeId: $removeId))
+//                ->customAttributes([
+//                    'class' => 'source-account-field'
+//                ])
+//                ->onChangeMethod(
+//                    'removeSelectedAccount',
+//                    selector: '#receive-account_field'
+//                ));
+//    }
+
     /**
+     * @param int|null $removeId
      * @return Collection
      */
-    private function getAccounts(): Collection
+    private function getAccounts(int $removeId = null): Collection
     {
         if ($this->accountsCache === null) {
             $user = auth()->user();
             $this->accountsCache = $user->accounts()
+                ->when($removeId, fn ($query) => $query->whereNot('id', $removeId))
                 ->with(['product', 'latestTransactions'])
                 ->orderBy('created_at')
                 ->get();
@@ -267,53 +332,11 @@ class Dashboard extends Page
     }
 
     /**
-     * @return array
-     */
-    #[AsyncMethod]
-    public function getDonutChartValues(): array
-    {
-        if (isset(request()['period'])) {
-            $dateFrom = request()['period']['date_from'];
-            $dateTo = request()['period']['date_to'];
-        } else {
-            $dateFrom = now()->startOfMonth();
-            $dateTo = now();
-        }
-
-        return $this->statisticsService->byDateGroupByAccounts(['date_from' => $dateFrom, 'date_to' => $dateTo]);
-    }
-
-    /**
-     * @return array
-     */
-    #[AsyncMethod]
-    public function getLineChartValues(): array
-    {
-        if (isset(request()['period'])) {
-            $dateFrom = request()['period']['date_from'];
-            $dateTo = request()['period']['date_to'];
-        } else {
-            $dateFrom = now()->startOfMonth();
-            $dateTo = now();
-        }
-
-        $chartData = $this->statisticsService->transactionsGroupByDay(['date_from' => $dateFrom, 'date_to' => $dateTo]);
-
-        return [
-            SeriesItem::make('Расходы', [
-                ...$chartData['sentStat']
-            ])->color('#FF69B4'),
-            SeriesItem::make('Доходы', [
-                ...$chartData['receivedStat']
-            ])->color('#F6B8B8')
-        ];
-    }
-
-    /**
      * @param bool $all
+     * @param int|null $removeId
      * @return array
      */
-    private function getProductsForSelect(bool $all = true): array
+    private function getProductsForSelect(bool $all = true, int $removeId = null): array
     {
         $products = [];
 
@@ -324,7 +347,7 @@ class Dashboard extends Page
             );
         }
 
-        foreach($this->getAccounts() as $account) {
+        foreach($this->getAccounts($removeId) as $account) {
             $products[] = new Option(
                 label: $account->product->title,
                 value: (string)$account->id,

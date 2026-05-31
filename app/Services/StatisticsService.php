@@ -9,31 +9,93 @@ use Illuminate\Support\Collection;
 class StatisticsService
 {
     /**
-     * @param array $dates
-     * @param int|null $accountId
-     * @return array
+     * @var string|null
      */
-   public function byDateGroupByAccounts(array $dates, int $accountId = null): array
-   {
-       $accountsWithTransactions = $this->accountsWithTransactions($dates, $accountId);
+    private ?string $popularCategory = null;
 
-       $allTransactions = $this->getAllTransactions($accountsWithTransactions);
+    /**
+     * @var float|null
+     */
+    private ?float $sentTransactionsSum = 0.0;
 
-       return $this->calculateStats($allTransactions);
-   }
+    /**
+     * @var float|null
+     */
+    private ?float $receivedTransactionsSum = 0.0;
 
     /**
      * @param array $dates
      * @param int|null $accountId
      * @return array
      */
-    public function transactionsGroupByDay(array $dates, int $accountId = null): array
+    public function getStats(array $dates, int $accountId = null): array
     {
-        $sentData = $this->accountsWithTransactions($dates, $accountId);
-        $receivedData = $this->accountsWithReceivedTransactions($dates, $accountId);
+        $accountsWithTransactions = $this->getAccountWithTransactions($dates, $accountId);
 
-        $sentStat = $this->calculateLineStats($sentData, $dates, TransactionRelation::SENT->value);
-        $receivedStat = $this->calculateLineStats($receivedData, $dates, TransactionRelation::RECEIVED->value);
+        return [
+            'donutStat' => $this->donutStat($accountsWithTransactions),
+            'lineStat' => $this->lineStat($accountsWithTransactions, $dates),
+            'metrics' => $this->metrics()
+        ];
+    }
+
+    /**
+     * @param $dates
+     * @param $accountId
+     * @return mixed
+     */
+    private function getAccountWithTransactions($dates, $accountId): mixed
+    {
+        $user = auth('moonshine')->user();
+
+        return $user
+            ->accounts()
+            ->when($accountId, fn ($query) => $query->where('id', '=', $accountId))
+            ->with(['sentTransactions' => function ($query) use ($dates) {
+                $query->whereBetween('created_at', [$dates['date_from'], $dates['date_to']])
+                    ->with('mcc');
+            }])
+            ->with(['receivedTransactions' => function ($query) use ($dates) {
+                $query->whereBetween('created_at', [$dates['date_from'], $dates['date_to']]);
+            }])
+            ->get()
+            ->filter(function ($account) {
+                return $account->sentTransactions->isNotEmpty();
+            });
+    }
+
+    /**
+     * @return array
+     */
+    private function metrics(): array
+    {
+        return [
+            'mostPopularCategory' => $this->popularCategory,
+            'sentSum' => $this->sentTransactionsSum,
+            'receivedSum' => $this->receivedTransactionsSum
+        ];
+    }
+
+    /**
+     * @param Collection $accountsWithTransactions
+     * @return array
+     **/
+    public function donutStat(Collection $accountsWithTransactions): array
+    {
+        $allTransactions = $this->getAllTransactions($accountsWithTransactions);
+
+        return $this->calculateDonutStats($allTransactions);
+    }
+
+    /**
+     * @param Collection $accountsWithTransactions
+     * @param array $dates
+     * @return array
+     */
+    public function lineStat(Collection $accountsWithTransactions, array $dates): array
+    {
+        $sentStat = $this->calculateLineStats($accountsWithTransactions, $dates, TransactionRelation::SENT->value);
+        $receivedStat = $this->calculateLineStats($accountsWithTransactions, $dates, TransactionRelation::RECEIVED->value);
 
         return [
             'sentStat' => $sentStat,
@@ -50,12 +112,17 @@ class StatisticsService
     private function calculateLineStats(Collection $accounts, array $dates, string $typeOfTransaction): array
     {
         $result = collect();
+        $sum = 0;
 
         foreach ($accounts as $account) {
             foreach ($account->$typeOfTransaction as $transaction) {
                 $result->push($transaction);
+                $sum += $transaction->amount;
             }
         }
+
+        $key = $typeOfTransaction . 'Sum';
+        $this->$key = $sum;
 
         $groppedTransactions = $result->groupBy(function($transaction) {
             return $transaction->created_at->format('Y-m-d');
@@ -77,7 +144,7 @@ class StatisticsService
      * @param Collection $transactions
      * @return array
      */
-    private function calculateStats(Collection $transactions): array
+    private function calculateDonutStats(Collection $transactions): array
     {
         $stat = [];
 
@@ -91,6 +158,9 @@ class StatisticsService
                 $stat['Переводы'] = ($stat['Переводы'] ?? 0) + $amount;
             }
         }
+
+        arsort($stat);
+        $this->popularCategory = (string)array_key_first($stat);
 
         return $stat;
     }
@@ -115,6 +185,10 @@ class StatisticsService
        }
    }
 
+    /**
+     * @param Collection $accounts
+     * @return Collection
+     */
    private function getAllTransactions(Collection $accounts): Collection
    {
        $result = collect();
@@ -127,38 +201,4 @@ class StatisticsService
 
        return $result;
    }
-
-   private function accountsWithTransactions(array $dates, int $accountId = null)
-   {
-       $user = auth('moonshine')->user();
-
-       return $user
-           ->accounts()
-           ->when($accountId, fn ($query) => $query->where('id', '=', $accountId))
-           ->with(['sentTransactions' => function ($query) use ($dates) {
-               $query->whereBetween('created_at', [$dates['date_from'], $dates['date_to']])
-                   ->with('mcc');
-           }])
-           ->get()
-           ->filter(function ($account) {
-               return $account->sentTransactions->isNotEmpty();
-           });
-   }
-
-    private function accountsWithReceivedTransactions(array $dates, int $accountId = null)
-    {
-        $user = auth('moonshine')->user();
-
-        return $user
-            ->accounts()
-            ->when($accountId, fn ($query) => $query->where('id', '=', $accountId))
-            ->with(['receivedTransactions' => function ($query) use ($dates) {
-                $query->whereBetween('created_at', [$dates['date_from'], $dates['date_to']])
-                    ->with('mcc');
-            }])
-            ->get()
-            ->filter(function ($account) {
-                return $account->receivedTransactions->isNotEmpty();
-            });
-    }
 }

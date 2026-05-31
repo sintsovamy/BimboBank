@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->uuid('transaction_uuid')->unique()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('transaction_uuid')->unique()->default(DB::raw('(UUID())'));
 
             // internal transactions
             $table->foreignId('source_account_id')->nullable()->constrained('accounts')->nullOnDelete();

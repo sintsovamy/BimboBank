@@ -36,8 +36,6 @@ class MCCSeeder extends Seeder
             ];
         }
 
-        DB::table('mcc')->truncate();
-
         foreach (array_chunk($records, 1000) as $chunk) {
             DB::table('mcc')->insert($chunk);
         }

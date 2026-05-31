@@ -22,10 +22,10 @@ class StatisticsController extends Controller
      */
     public function __invoke(StatisticsRequest $request): JsonResponse
     {
-        $donutChartData = $this->statisticsService->byDateGroupByAccounts(
+        $donutChartData = $this->statisticsService->getStats(
             ['date_from' => $request->getDateFrom(), 'date_to' => $request->getDateTo()],
             $request->getAccountId()
-        );
+        )['donutStat'];
 
         $html = (string) Div::make([
             DonutChartMetric::make('Расходы категориям')
