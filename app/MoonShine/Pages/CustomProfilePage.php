@@ -11,6 +11,7 @@ use MoonShine\UI\Components\Layout\Box;
 use MoonShine\UI\Components\Tabs;
 use MoonShine\UI\Components\Tabs\Tab;
 use MoonShine\UI\Fields\Date;
+use MoonShine\UI\Fields\Hidden;
 use MoonShine\UI\Fields\ID;
 use MoonShine\UI\Fields\Password;
 use MoonShine\UI\Fields\PasswordRepeat;
@@ -47,8 +48,7 @@ class CustomProfilePage extends ProfilePage
             Text::make('Email', 'email')
                 ->readonly(),
 
-            Text::make('Логин', 'name')
-                ->setValue($user->name),
+            Hidden::make('name')->setValue(moonshineConfig()->getUserField('name')),
         ]);
 
         $userPasswordsFields = moonshineConfig()->getUserField('password') ? [

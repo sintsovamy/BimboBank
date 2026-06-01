@@ -119,7 +119,11 @@ final class MoonShineLayout extends AppLayout
      */
     protected function getProfileComponent(): Profile
     {
-        return Profile::make()
+        $profile = auth('moonshine')->user()->profile;
+
+        return Profile::make(
+            nameOfUser: fn () => $profile->first_name
+        )
             ->avatarPlaceholder(url('logo.png'));
     }
 }
