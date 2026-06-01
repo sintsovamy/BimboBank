@@ -35,8 +35,7 @@ class ProfileFactory extends Factory
             'passport_series_number' => $faker->numerify('#### ######'),
             'passport_details' => $faker->sentence(),
             'address' => $faker->address(),
-            'phone_number' => $faker->numerify('+7##########'),
-            'email' => $faker->email()
+            'phone_number' => $faker->numerify('+7##########')
         ];
     }
 }

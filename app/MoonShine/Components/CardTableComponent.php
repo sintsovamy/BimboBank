@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\MoonShine\Components;
 
 use App\Models\Currency;
-use Closure;
 use MoonShine\UI\Components\MoonShineComponent;
 use MoonShine\UI\Components\Table\TableBuilder;
 use MoonShine\UI\Fields\Text;
@@ -15,6 +14,9 @@ use MoonShine\UI\Fields\Text;
  */
 final class CardTableComponent extends MoonShineComponent
 {
+    /**
+     * @var string
+     */
     protected string $view = 'admin.components.card-table-component';
 
     public function __construct()

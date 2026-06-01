@@ -44,13 +44,11 @@ class CustomProfilePage extends ProfilePage
             Text::make('Телефон', 'profile.phone_number')
                 ->readonly(),
 
-            Text::make('Email', 'profile.email')
+            Text::make('Email', 'email')
                 ->readonly(),
 
-            moonshineConfig()->getUserField('username')
-                ? Text::make(__('moonshine::ui.login.username'), moonshineConfig()->getUserField('username'))
-                ->required()
-                : null,
+            Text::make('Логин', 'name')
+                ->setValue($user->name),
         ]);
 
         $userPasswordsFields = moonshineConfig()->getUserField('password') ? [

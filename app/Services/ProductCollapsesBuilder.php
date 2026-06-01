@@ -4,23 +4,12 @@ namespace App\Services;
 
 use App\Models\Account;
 use Illuminate\Support\Collection;
-use MoonShine\Crud\JsonResponse;
-use MoonShine\Laravel\Collections\Fields;
-use MoonShine\Support\Attributes\AsyncMethod;
 use MoonShine\Support\DTOs\Select\Option;
-use MoonShine\Support\DTOs\Select\OptionProperty;
-use MoonShine\Support\Enums\HttpMethod;
 use MoonShine\UI\Components\ActionButton;
 use MoonShine\UI\Components\Collapse;
-use MoonShine\UI\Components\FormBuilder;
 use MoonShine\UI\Components\Layout\Column;
-use MoonShine\UI\Components\Layout\Div;
-use MoonShine\UI\Components\Layout\Divider;
 use MoonShine\UI\Components\Layout\Grid;
-use MoonShine\UI\Fields\Number;
 use MoonShine\UI\Fields\Preview;
-use MoonShine\UI\Fields\Select;
-use MoonShine\UI\Fields\Text;
 
 class ProductCollapsesBuilder
 {

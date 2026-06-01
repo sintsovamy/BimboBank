@@ -21,8 +21,7 @@ class Profile extends Model
         'passport_series_number',
         'passport_details',
         'address',
-        'phone_number',
-        'email'
+        'phone_number'
     ];
 
     /**

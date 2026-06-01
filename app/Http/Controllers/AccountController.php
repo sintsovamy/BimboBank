@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Account;
-use App\Services\PrepareHtmlService;
+use App\Services\PrepareAccountHtmlService;
 use MoonShine\Crud\JsonResponse;
 
 class AccountController extends Controller
 {
     public function __construct(
-        protected readonly PrepareHtmlService $prepareHtmlService
+        protected readonly PrepareAccountHtmlService $prepareHtmlService
     )
     {
     }

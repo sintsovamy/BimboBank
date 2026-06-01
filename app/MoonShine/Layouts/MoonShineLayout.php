@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\MoonShine\Layouts;
 
-use Illuminate\Support\Facades\Vite;
 use MoonShine\AssetManager\Js;
 use MoonShine\ColorManager\Palettes\ValentinePalette;
 use MoonShine\Crud\Components\Fragment;
@@ -46,10 +45,15 @@ final class MoonShineLayout extends AppLayout
     {
         return [
             ...parent::assets(),
-            Js::make('js/enableAmountField.js')
+            Js::make('js/enableAmountField.js'),
+            Js::make('js/enableSumField.js'),
+            Js::make('js/updateSelect.js')
         ];
     }
 
+    /**
+     * @return Header
+     */
     protected function getHeaderComponent(): Header
     {
         return Header::make([
@@ -110,6 +114,9 @@ final class MoonShineLayout extends AppLayout
         ];
     }
 
+    /**
+     * @return Profile
+     */
     protected function getProfileComponent(): Profile
     {
         return Profile::make()

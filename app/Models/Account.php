@@ -43,7 +43,8 @@ class Account extends Model
      */
     public function sentTransactions(): HasMany
     {
-        return $this->hasMany(Transaction::class, 'source_account_id');
+        return $this->hasMany(Transaction::class, 'source_account_id')
+            ->with('destinationAccount.user.profile');
     }
 
     /**
@@ -64,6 +65,7 @@ class Account extends Model
     {
         return $this->hasMany(Transaction::class, 'source_account_id')
             ->orWhere('destination_account_id', $this->id)
+            ->with(['sourceAccount.user.profile', 'destinationAccount.user.profile'])
             ->orderBy('created_at', 'desc')
             ->limit($limit);
     }
@@ -73,7 +75,8 @@ class Account extends Model
      */
     public function receivedTransactions(): HasMany
     {
-        return $this->hasMany(Transaction::class, 'destination_account_id');
+        return $this->hasMany(Transaction::class, 'destination_account_id')
+            ->with('sourceAccount.user.profile');
     }
 
     /**

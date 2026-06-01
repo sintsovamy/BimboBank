@@ -8,7 +8,7 @@ use MoonShine\UI\Components\Layout\Column;
 use MoonShine\UI\Components\Title;
 use MoonShine\UI\Fields\Preview;
 
-class PrepareHtmlService
+class PrepareAccountHtmlService
 {
     public function __construct(
         protected readonly TransactionTableBuilder $transactionTableBuilder
@@ -33,6 +33,9 @@ class PrepareHtmlService
 
            Preview::make('', '', function () use ($account) {
                return '<span>Номер счёта: </span>' . $account->account_number . '<br>' .
+                   ($account->product->card_number ?
+                   '<span>Номер карты: </span>' . $account->product->card_number . '<br>' :
+                   '' ).
                    '<span>Процентная ставка: </span>' . $account->product->rate . '%' . '<br>' .
                    '<span>Лимит овердрафта: </span>' . $account->product->limit . '₽';
            }),

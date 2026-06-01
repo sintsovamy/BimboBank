@@ -2,9 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Account;
 use App\Models\MoonshineUser;
-use App\Models\Product;
 use Database\Factories\AccountFactory;
 use Database\Factories\MoonshineUserFactory;
 use Database\Factories\ProductFactory;
@@ -39,7 +37,6 @@ class UserSeeder extends Seeder
             'passport_details' => 'dfsgergre',
             'address' => 'Томск',
             'phone_number' => '+79999999999',
-            'email' => 'mail@mail.com'
         ]);
 
         AccountFactory::new()

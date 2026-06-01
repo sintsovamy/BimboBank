@@ -23,8 +23,6 @@ use MoonShine\Support\DTOs\AsyncCallback;
 use MoonShine\Support\DTOs\Select\Option;
 use MoonShine\Support\DTOs\Select\Options;
 use MoonShine\Support\Enums\FormMethod;
-use MoonShine\Support\Enums\ToastType;
-use MoonShine\UI\Collections\Fields;
 use MoonShine\UI\Components\ActionButton;
 use MoonShine\UI\Components\Collapse;
 use MoonShine\UI\Components\FormBuilder;
@@ -36,7 +34,6 @@ use MoonShine\UI\Components\Layout\Flex;
 use MoonShine\UI\Components\Layout\Grid;
 use MoonShine\UI\Components\Metrics\Wrapped\ValueMetric;
 use MoonShine\UI\Fields\DateRange;
-use MoonShine\UI\Fields\Field;
 use MoonShine\UI\Fields\Hidden;
 use MoonShine\UI\Fields\Number;
 use MoonShine\UI\Fields\Preview;
@@ -99,9 +96,7 @@ class Dashboard extends Page
                     ->customAttributes([
                         'style' => 'background-color:#FF69B4; color: white;'
                     ])
-                    ->inModal(
-                        'Перевод',
-                        name: 'checksum-modal',
+                    ->inModal('Перевод',
                         components: [
                             Flex::make([
                                 ActionButton::make('Между своими')
@@ -114,19 +109,17 @@ class Dashboard extends Page
                                                     Select::make('Счет списания', 'source_account_id')
                                                         ->options($this->getProductsForSelect())
                                                         ->onChangeMethod(
-                                                            'getRecipientUser',
-                                                            selector: '#receive-user-name',
-                                                            callback: AsyncCallback::with(responseHandler: 'enableAmountField')
+                                                            'removeSelectedAccount',
+                                                            selector: '#receive-account-field',
+                                                            callback: AsyncCallback::with(responseHandler: 'updateSelect')
                                                         ),
-                                                    Select::make('Счет назначения', 'receive_account_id')
-                                                        ->reactive(silentSelf: true)
-                                                        ->onChangeMethod(
-                                                            'getRecipientUser',
-                                                            selector: '#receive-user-name',
-                                                            callback: AsyncCallback::with(responseHandler: 'enableAmountField')
-                                                        ),
+                                                    Div::make()->customAttributes([
+                                                            'id' => 'receive-account-field'
+                                                    ]),
                                                     Divider::make(),
-                                                    Number::make('Введите сумму', 'amount')
+                                                    Div::make()->customAttributes([
+                                                        'id' => 'sum-field'
+                                                    ]),
                                                 ])
                                                 ->customAttributes([
                                                     'class' => 'transaction-form'
@@ -231,6 +224,9 @@ class Dashboard extends Page
         ];
     }
 
+    /**
+     * @return JsonResponse
+     */
     #[AsyncMethod]
     public function getRecipientUser(): JsonResponse
     {
@@ -277,41 +273,45 @@ class Dashboard extends Page
         }
 
         return JsonResponse::make(['found' => false])
-            ->html((string)Div::make([])->customAttributes(['class' => 'receive-user-name']))
-            ->toast('Пользователь не найден', ToastType::ERROR);
+            ->html((string)Div::make([
+                Preview::make('Получатель', 'receiver')
+                    ->setValue('Получатель не найден. Проверьте данные.'),
+            ])->customAttributes(['class' => 'receive-user-name']));
     }
 
-//    #[AsyncMethod]
-//    public function removeSelectedAccount(): JsonResponse
-//    {
-//        if (isset(request()['_data']['source_account_id'])) {
-//            $removeId = request()->integer(['_data']['source_account_id']);
-//            dd($removeId)
-//            return JsonResponse::make()
-//                ->html((string)Select::make('Счет назначения', 'receive_account_id')
-//                    ->options($this->getProductsForSelect(all: false, removeId: $removeId))
-//                    ->customAttributes([
-//                        'class' => 'receive-account-field'
-//                    ])
-//                    ->onChangeMethod(
-//                        'removeSelectedAccount',
-//                        selector: '#source-account_field'
-//                    ));
-//        }
-//
-//        $removeId = request()->integer(['_data']['receive_account_id']);
-//
-//        return JsonResponse::make()
-//            ->html((string)Select::make('Счет списания', 'source_account_id')
-//                ->options($this->getProductsForSelect(all: false, removeId: $removeId))
-//                ->customAttributes([
-//                    'class' => 'source-account-field'
-//                ])
-//                ->onChangeMethod(
-//                    'removeSelectedAccount',
-//                    selector: '#receive-account_field'
-//                ));
-//    }
+    /**
+     * @return JsonResponse
+     */
+    #[AsyncMethod]
+    public function removeSelectedAccount(): JsonResponse
+    {
+        $removeId = (int)(request()['_data']['source_account_id']);
+        $options = $this->getProductsForSelect(all: false, removeId: $removeId);
+
+        return JsonResponse::make()
+            ->html(
+                (string) Select::make('Счет назначения', 'receive_account_id')
+                    ->options($options)
+                    ->onChangeMethod(
+                        'enableSumField',
+                        selector: '#sum-field',
+                        callback: AsyncCallback::with(responseHandler: 'enableSumField')
+                    ),
+            );
+    }
+
+    /**
+     * @return JsonResponse
+     */
+    #[AsyncMethod]
+    public function enableSumField(): JsonResponse
+    {
+        return JsonResponse::make()
+            ->html(
+                (string) Number::make('Введите сумму', 'amount')
+                    ->customAttributes(['id' => 'sum-field']),
+            );
+    }
 
     /**
      * @param int|null $removeId
