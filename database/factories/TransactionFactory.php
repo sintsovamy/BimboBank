@@ -19,12 +19,14 @@ class TransactionFactory extends Factory
      */
     public function definition(): array
     {
+        $date = $this->faker->dateTimeBetween('-6 months', 'now');
+
         return [
             'amount' => $this->faker->randomFloat(2, 100, 50000),
             'currency_id' => 1,
             'status' => 'completed',
-            'created_at' => now(),
-            'completed_at' => now(),
+            'created_at' => $date,
+            'completed_at' => $date,
         ];
     }
 

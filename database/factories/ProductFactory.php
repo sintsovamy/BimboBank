@@ -28,7 +28,10 @@ class ProductFactory extends Factory
         $faker = Faker::create('ru_RU');
 
         return [
-            'title' => $faker->randomElement(['Зарплатный', 'Классический', 'Premium', 'Gold']),
+            'title' => $faker->randomElement([
+                'Зарплатный', 'Классический', 'Premium', 'Gold', 'Silver', 'Classic', 'Социальный', 'Молодежный',
+                'Пенсионный'
+            ]),
             'type' => $faker->randomElement(ProductTypes::values()),
             'rate' => $faker->randomDigit(),
             'card_number' => $faker->creditCardNumber()
