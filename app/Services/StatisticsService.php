@@ -159,6 +159,10 @@ class StatisticsService
             }
         }
 
+        if (empty($stat)) {
+            $stat[] = 0;
+        }
+
         arsort($stat);
         $this->popularCategory = (string)array_key_first($stat);
 

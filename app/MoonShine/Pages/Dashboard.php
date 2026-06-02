@@ -9,7 +9,6 @@ use App\Models\Profile;
 use App\Services\ProductCollapsesBuilder;
 use App\Services\StatisticsService;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Cache;
 use JetBrains\PhpStorm\NoReturn;
 use MoonShine\Apexcharts\Components\DonutChartMetric;
 use MoonShine\Apexcharts\Components\LineChartMetric;
@@ -76,12 +75,10 @@ class Dashboard extends Page
     {
         parent::prepareBeforeRender();
 
-        $this->stats = Cache::remember('stat', now()->addHours(24), function() {
-            return $this->statisticsService->getStats([
-                'date_from' => now()->startOfMonth(),
-                'date_to' => now()
-            ]);
-        });
+        $this->stats = $this->statisticsService->getStats([
+            'date_from' => now()->startOfMonth(),
+            'date_to' => now()
+        ]);
     }
 
 
@@ -188,7 +185,8 @@ class Dashboard extends Page
 
                     Column::make([
                         ValueMetric::make('Самая популярная категория')
-                            ->value($this->stats['metrics']['mostPopularCategory']),
+                            ->value($this->stats['metrics']['mostPopularCategory'])
+                            ->canSee(fn () => $this->stats['metrics']['mostPopularCategory']),
                         ValueMetric::make('Доход за месяц')
                             ->value($this->stats['metrics']['receivedSum'])
                             ->valueFormat(fn(int $value): string => number_format($value, 2, ',', ' ')),
@@ -213,15 +211,18 @@ class Dashboard extends Page
                             Div::make([
                                 DonutChartMetric::make('Расходы категориям')
                                     ->colors(['#FFC0CB', '#FFB6C1', '#FF69B4', '#F6B8B8', '#F4B4C4', '#FC8EAC', '#E30B5C', '#CA2C92'])
-                                    ->values([
-                                        ...$this->stats['donutStat']
-                                    ]),
+                                    ->values($this->stats['donutStat']),
                             ])->customAttributes(['class' => 'expenses-chart']),
                         ]),
                     ], colSpan: 5, adaptiveColSpan: 5),
                 ])
             ])
         ];
+    }
+
+    private function getDonutStat(): array
+    {
+        return empty($this->stats['donutStat']) ? [[]] : $this->stats['donutStat'];
     }
 
     /**
