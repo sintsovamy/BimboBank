@@ -13,7 +13,7 @@ document.addEventListener("moonshine:init", () => {
             const cardField = document.querySelector('#card-number-field');
             const amountField = document.querySelector('#amount-field');
 
-            if (response.data && response.data.foundBy) {
+            if (response.data && response.data.found && response.data.foundBy) {
                 if (amountField) {
                     amountField.disabled = false;
                     amountField.classList.remove('opacity-50', 'bg-gray-100');
@@ -21,13 +21,28 @@ document.addEventListener("moonshine:init", () => {
                 if (response.data.foundBy === 'phone') {
                     if (cardField) {
                         cardField.disabled = true;
+                        cardField.value = '';
                         cardField.classList.add('opacity-50', 'bg-gray-100');
                     }
                 }
                 else if (response.data.foundBy === 'card') {
                     if (phoneField) {
                         phoneField.disabled = true;
+                        phoneField.value = '';
                         phoneField.classList.add('opacity-50', 'bg-gray-100');
+                    }
+                }
+            } else {
+                if (response.data && !response.data.found) {
+                    if (amountField) {
+                        amountField.disabled = true;
+                        amountField.classList.remove('opacity-50', 'bg-gray-100');
+                    }
+                    if (cardField) {
+                        cardField.disabled = false;
+                    }
+                    if (phoneField) {
+                        phoneField.disabled = false;
                     }
                 }
             }
