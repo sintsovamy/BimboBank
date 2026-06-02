@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ProductTypes;
 use App\Models\Account;
 use Illuminate\Support\Collection;
 use MoonShine\Support\DTOs\Select\Option;
@@ -77,7 +78,10 @@ class ProductCollapsesBuilder
      */
     private function getProductIcon($account): string
     {
-        return $account->product ? 'credit-card' : 'banknotes';
+        return match ($account->product->type) {
+            ProductTypes::CREDIT_CARD, ProductTypes::DEBIT_CARD => 'credit-card',
+            default => 'banknotes',
+        };
     }
 
     /**
