@@ -2,7 +2,6 @@
 
 namespace Tests\Unit;
 
-use App\Models\Account;
 use App\Services\TransferService;
 use Database\Factories\AccountFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -13,9 +12,6 @@ class TransferTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /**
-     * A basic feature test example.
-     */
     public function test_transfer_between_accounts(): void
     {
         $source = AccountFactory::new()->create([
@@ -42,6 +38,14 @@ class TransferTest extends TestCase
         $this->assertEquals(
             2000,
             $receive->fresh()->balance
+        );
+
+        $this->assertDatabaseHas(
+            'transactions', [
+                'amount' => 1000,
+                'source_account_id' => $source->id,
+                'destination_account_id' => $receive->id
+            ]
         );
     }
 

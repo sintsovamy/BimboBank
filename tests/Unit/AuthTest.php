@@ -50,4 +50,10 @@ class AuthTest extends TestCase
         $this->assertGuest();
         $response->assertSessionHasErrors();
     }
+    public function test_guest_cannot_access_dashboard()
+    {
+        $response = $this->get('bank/');
+
+        $response->assertRedirect('bank/login');
+    }
 }
