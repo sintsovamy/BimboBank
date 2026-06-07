@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MoonShine\Pages;
 
+use App\Models\MoonshineUser;
 use App\Models\Product;
 use App\Models\Profile;
 use App\Services\ProductCollapsesBuilder;
@@ -100,68 +101,24 @@ class Dashboard extends Page
                                     ->customAttributes(['style' => 'background-color:#FF69B4; color: white;'])
                                     ->inModal('Перевод между своими счетами',
                                         components: [
-                                            FormBuilder::make(route('bank.transfer'))
-                                                ->async()
-                                                ->fields([
-                                                    Select::make('Счет списания', 'source_account_id')
-                                                        ->options($this->getProductsForSelect())
-                                                        ->onChangeMethod(
-                                                            'removeSelectedAccount',
-                                                            selector: '#receive-account-field',
-                                                            callback: AsyncCallback::with(responseHandler: 'updateSelect')
-                                                        ),
-                                                    Div::make()->customAttributes([
-                                                            'id' => 'receive-account-field'
-                                                    ]),
-                                                    Divider::make(),
-                                                    Div::make()->customAttributes([
-                                                        'id' => 'sum-field'
-                                                    ]),
-                                                ])
-                                                ->customAttributes([
-                                                    'class' => 'transaction-form'
-                                                ])
-                                                ->submit('Продолжить', ['style' => 'background-color:#FF69B4; color: white;'])
+                                            $this->transferBetweenAccountsForm()
                                         ]
                                     )
-                                    ->customAttributes(['class' => 'w-full aspect-square flex items-center justify-center text-center p-4']),
+                                    ->customAttributes([
+                                        'class' =>
+                                            'w-full aspect-square flex items-center justify-center text-center p-4'
+                                    ]),
                                 ActionButton::make('Клиенту банка')
                                     ->customAttributes(['style' => 'background-color:#FF69B4; color: white;'])
                                     ->inModal('Перевод клиенту внутри банка',
                                         components: [
-                                            FormBuilder::make(route('bank.transfer'))
-                                                ->async()
-                                                ->fields([
-                                                    Select::make('Счет списания', 'source_account_id')
-                                                        ->options($this->getProductsForSelect(false)),
-                                                    Text::make('Номер телефона', 'phone')
-                                                        ->mask('+7 (999) 999-99-99')
-                                                        ->onChangeMethod(
-                                                            'getRecipientUser',
-                                                            selector: '#receive-user-name',
-                                                            callback: AsyncCallback::with(responseHandler: 'enableAmountField')
-                                                        )
-                                                        ->customAttributes(['id' => 'phone-field']),
-                                                    Text::make('Номер карты', 'card_number')
-                                                        ->mask('9999999999999999')
-                                                        ->onChangeMethod(
-                                                            'getRecipientUser',
-                                                            selector: '#receive-user-name',
-                                                            callback: AsyncCallback::with(responseHandler: 'enableAmountField')
-                                                        )
-                                                        ->customAttributes(['id' => 'card-number-field']),
-                                                    Div::make([])
-                                                        ->customAttributes(['id' => 'receive-user-name']),
-                                                    Number::make('Введите сумму', 'amount')
-                                                        ->disabled()
-                                                        ->name('amount-field')
-                                                        ->customAttributes(['id' => 'amount-field']),
-                                                ])
-                                                ->customAttributes(['class' => 'transaction-form'])
-                                                ->submit('Продолжить', ['style' => 'background-color:#FF69B4; color: white;'])
+                                            $this->transferToOtherClientForm()
                                         ]
                                     )
-                                    ->customAttributes(['class' => 'w-full aspect-square flex items-center justify-center text-center p-4']),
+                                    ->customAttributes([
+                                        'class' =>
+                                            'w-full aspect-square flex items-center justify-center text-center p-4'
+                                    ]),
                             ])->class('grid grid-cols-2 gap-4')
                         ]),
                 Grid::make([
@@ -220,9 +177,75 @@ class Dashboard extends Page
         ];
     }
 
-    private function getDonutStat(): array
+    /**
+     * @return FormBuilder
+     */
+    private function transferBetweenAccountsForm(): FormBuilder
     {
-        return empty($this->stats['donutStat']) ? [[]] : $this->stats['donutStat'];
+        return FormBuilder::make(route('bank.transfer'))
+            ->async()
+            ->fields([
+                Select::make('Счет списания', 'source_account_id')
+                    ->options($this->getProductsForSelect())
+                    ->onChangeMethod(
+                        'removeSelectedAccount',
+                        selector: '#receive-account-field',
+                        callback: AsyncCallback::with(
+                            responseHandler: 'updateSelect'
+                        )
+                    ),
+                Div::make()->customAttributes([
+                    'id' => 'receive-account-field'
+                ]),
+                Divider::make(),
+                Div::make()->customAttributes([
+                    'id' => 'sum-field'
+                ]),
+            ])
+            ->customAttributes([
+                'class' => 'transaction-form'
+            ])
+            ->submit(
+                'Продолжить',
+                ['style' => 'background-color:#FF69B4; color: white;']
+            );
+    }
+
+    /**
+     * @return FormBuilder
+     */
+    private function transferToOtherClientForm(): FormBuilder
+    {
+        return FormBuilder::make(route('bank.transfer'))
+            ->async()
+            ->fields([
+                Select::make('Счет списания', 'source_account_id')
+                    ->options($this->getProductsForSelect(false)),
+                Text::make('Номер телефона', 'phone')
+                    ->mask('+7 (999) 999-99-99')
+                    ->onChangeMethod(
+                        'getRecipientUser',
+                        selector: '#receive-user-name',
+                        callback: AsyncCallback::with(responseHandler: 'enableAmountField')
+                    )
+                    ->customAttributes(['id' => 'phone-field']),
+                Text::make('Номер карты', 'card_number')
+                    ->mask('9999999999999999')
+                    ->onChangeMethod(
+                        'getRecipientUser',
+                        selector: '#receive-user-name',
+                        callback: AsyncCallback::with(responseHandler: 'enableAmountField')
+                    )
+                    ->customAttributes(['id' => 'card-number-field']),
+                Div::make([])
+                    ->customAttributes(['id' => 'receive-user-name']),
+                Number::make('Введите сумму', 'amount')
+                    ->disabled()
+                    ->name('amount-field')
+                    ->customAttributes(['id' => 'amount-field']),
+            ])
+            ->customAttributes(['class' => 'transaction-form'])
+            ->submit('Продолжить', ['style' => 'background-color:#FF69B4; color: white;']);
     }
 
     /**
@@ -258,12 +281,12 @@ class Dashboard extends Page
                 ->with('account.user.profile')
                 ->first();
 
-            $receiveAccount = $product->account;
+            $receiveAccount = $product?->account;
 
             if ($product && $receiveAccount) {
                 return JsonResponse::make([
                     'found' => true,
-                    'foundBy' => 'phone'
+                    'foundBy' => 'card'
                 ])
                     ->html((string)Div::make([
                         Preview::make('Получатель', 'receiver')

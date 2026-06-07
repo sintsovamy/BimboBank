@@ -43,7 +43,7 @@ class StatisticsRequest extends FormRequest
     public function getDateFrom(): Carbon
     {
         return Carbon::parse(
-            $this->input('period.date_from') ?? auth('moonshine')->user()->created_at
+            $this->input('period.date_from') ?? now()->startOfMonth()
         )->startOfDay();
     }
 
