@@ -23,4 +23,12 @@ class MoonshineUser extends User
     {
         return $this->hasMany(Account::class, 'user_id', 'id');
     }
+
+    /**
+     * @return HasMany
+     */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'user_id', 'id');
+    }
 }

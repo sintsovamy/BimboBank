@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\MoonShine\Pages;
 
-use App\Models\MoonshineUser;
 use App\Models\Product;
 use App\Models\Profile;
 use App\Services\ProductCollapsesBuilder;

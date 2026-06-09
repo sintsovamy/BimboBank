@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MoonShine\Layouts;
 
+use App\MoonShine\Components\ChatButton;
 use MoonShine\AssetManager\Js;
 use MoonShine\ColorManager\Palettes\ValentinePalette;
 use MoonShine\Crud\Components\Fragment;
@@ -67,6 +68,7 @@ final class MoonShineLayout extends AppLayout
                 label: 'На главную',
             ),
             $this->getSearchComponent(),
+            ChatButton::make(),
             When::make(
                 fn (): bool => $this->hasThemes() && ! $this->isAlwaysDark() && ($this->mobileMode || (! $this->sidebar && ! $this->topBar)),
                 static fn (): array => [ThemeSwitcher::make(),],
